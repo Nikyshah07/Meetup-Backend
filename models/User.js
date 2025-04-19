@@ -1,14 +1,15 @@
 // models/User.js
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
+require('dotenv').config();
 
 // Connection config
 const pool = new Pool({
-    host: "localhost",
-    user: "postgres",
-    port: 5432,
-    password: "niky071",
-    database: "demopost"
+    host: process.env.HOST,
+    user: process.env.USER,
+    port: process.env.DATABASEPORT,
+    password: process.env.PASSWORD,
+    database: process.env.DATABASE,
 });
 
 // User Schema definition
