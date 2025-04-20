@@ -3,6 +3,7 @@ const UserSchema = require('./models/User.js');
 const app = express();
 const registerRoute=require('./routes/Register.js')
 const loginRoute=require('./routes/Login.js')
+const signinGoogle=require('./routes/SignWithGoogle.js')
 
 // Middleware
 app.use(express.json({ limit: '50mb' })); // Increased limit for base64 images
@@ -22,7 +23,7 @@ async function initializeDatabase() {
 initializeDatabase();
 app.use('/',registerRoute);
 app.use('/',loginRoute)
-
+app.use('/',signinGoogle)
 
 // Start server
 const PORT = process.env.PORT || 5000;
