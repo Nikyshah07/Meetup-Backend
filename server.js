@@ -7,8 +7,9 @@ const signinGoogle=require('./routes/SignWithGoogle.js')
 const cors=require('cors');
 app.use(cors())
 // Middleware
-app.use(express.json({ limit: '50mb' })); // Increased limit for base64 images
 
+// ADD THIS
+app.use(express.json());
 // Initialize database
 async function initializeDatabase() {
     try {

@@ -15,12 +15,12 @@ router.post('/login', async (req, res) => {
         const user = await UserSchema.findByEmail(email);
         if (!user) {
             console.log("User not found:", email);
-            return res.status(401).json({ error: "Invalid credentials" });
+            return res.status(401).json({ error: "No account found with this email" });
         }
         
         // Check if this user was created with Google OAuth
         if (user.auth_type === "GOOGLE") {
-            return res.status(401).json({ error: "Use Google Sign-In", "auth_type": user.auth_type });
+            return res.status(401).json({ error: "Log in with Google, this account is Google-linked", "auth_type": user.auth_type });
           }
         
         // Compare password for regular accounts
@@ -29,7 +29,7 @@ router.post('/login', async (req, res) => {
             console.log("Password validation result:", isPasswordValid);
             
             if (!isPasswordValid) {
-                return res.status(401).json({ error: "Invalid credentials" });
+                return res.status(401).json({ error: "Invalid password" });
             }
         } catch (error) {
             console.error("Password validation error:", error);
@@ -39,7 +39,9 @@ router.post('/login', async (req, res) => {
         // Don't send the password and photo in response
         const { password: _, photo: __, ...userWithoutSensitiveInfo } = user;
         
-        res.status(200).json({
+        res.status(200).json(console.log("User logged in:", userWithoutSensitiveInfo),
+        
+            {
             message: "Login successful",
             user: userWithoutSensitiveInfo
         });

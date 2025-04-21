@@ -118,7 +118,8 @@ router.post('/signwithgoogle', async (req, res) => {
                 id: user.id,
                 username: user.username,
                 email: user.email,
-                photo: user.photo
+                photo: user.photo,
+                auth_type: user.auth_type
             }
         });
     } catch (error) {
