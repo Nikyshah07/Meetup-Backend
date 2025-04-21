@@ -88,10 +88,10 @@ const UserSchema = {
             const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
             
             const result = await pool.query(
-                `INSERT INTO ${this.tableName} (username, email, password, photo) 
+                `INSERT INTO ${this.tableName} (username, email, password, photo, auth_type) 
                 VALUES ($1, $2, $3, $4) 
-                RETURNING id, username, email, photo, created_at`,
-                [userData.username, userData.email, hashedPassword, userData.photo]
+                RETURNING id, username, email, photo,auth_type, created_at`,
+                [userData.username, userData.email, hashedPassword, userData.photo,  userData.auth_type || 'EMAIL']
             );
             
             return result.rows[0];
