@@ -23,7 +23,7 @@ const UserSchema = {
         email: { type: 'VARCHAR(100)', notNull: true, unique: true },
         password: { type: 'VARCHAR(255)', notNull: true },
         photo: { type: 'TEXT' },
-        auth_type: { type: 'VARCHAR(20)', default: `'email'` },
+        auth_type: { type: 'VARCHAR(20)', default: 'EMAIL' },
         created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' }
     },
     
