@@ -14,13 +14,26 @@ router.post('/login', async (req, res) => {
         // Find user by email
         const user = await UserSchema.findByEmail(email);
         if (!user) {
+            console.log("User not found:", email);
             return res.status(401).json({ error: "Invalid credentials" });
         }
         
-        // Compare password
-        const isPasswordValid = await UserSchema.validatePassword(password, user.password);
-        if (!isPasswordValid) {
-            return res.status(401).json({ error: "Invalid credentials" });
+        // Check if this user was created with Google OAuth
+        if (user.auth_type === "GOOGLE") {
+            return res.status(401).json({ error: "Use Google Sign-In", isGoogleAccount: true });
+          }
+        
+        // Compare password for regular accounts
+        try {
+            const isPasswordValid = await UserSchema.validatePassword(password, user.password);
+            console.log("Password validation result:", isPasswordValid);
+            
+            if (!isPasswordValid) {
+                return res.status(401).json({ error: "Invalid credentials" });
+            }
+        } catch (error) {
+            console.error("Password validation error:", error);
+            return res.status(500).json({ error: "Error validating credentials" });
         }
         
         // Don't send the password and photo in response

@@ -22,7 +22,8 @@ router.post('/register', async (req, res) => {
             username,
             email,
             password,
-            photo
+            photo,
+            auth_type: "EMAIL" // Set to false for regular signup
         });
         
         res.status(201).json({

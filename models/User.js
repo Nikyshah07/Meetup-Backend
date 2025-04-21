@@ -23,6 +23,7 @@ const UserSchema = {
         email: { type: 'VARCHAR(100)', notNull: true, unique: true },
         password: { type: 'VARCHAR(255)', notNull: true },
         photo: { type: 'TEXT' },
+        auth_type: { type: 'VARCHAR(20)', default: `'email'` },
         created_at: { type: 'TIMESTAMP', default: 'CURRENT_TIMESTAMP' }
     },
     
@@ -89,7 +90,7 @@ const UserSchema = {
             const result = await pool.query(
                 `INSERT INTO ${this.tableName} (username, email, password, photo) 
                 VALUES ($1, $2, $3, $4) 
-                RETURNING id, username, email, created_at`,
+                RETURNING id, username, email, photo, created_at`,
                 [userData.username, userData.email, hashedPassword, userData.photo]
             );
             
