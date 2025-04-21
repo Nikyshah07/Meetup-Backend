@@ -20,7 +20,7 @@ router.post('/login', async (req, res) => {
         
         // Check if this user was created with Google OAuth
         if (user.auth_type === "GOOGLE") {
-            return res.status(401).json({ error: "Use Google Sign-In", isGoogleAccount: true });
+            return res.status(401).json({ error: "Use Google Sign-In", "auth_type": user.auth_type });
           }
         
         // Compare password for regular accounts
