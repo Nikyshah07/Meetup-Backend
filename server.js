@@ -1,9 +1,17 @@
 const express = require('express');
 const UserSchema = require('./models/User.js');
 const app = express();
+const profileRoute=require('./routes/Profile.js')
+
 const registerRoute=require('./routes/Register.js')
 const loginRoute=require('./routes/Login.js')
 const signinGoogle=require('./routes/SignWithGoogle.js')
+
+const forgotPassword=require('./routes/ForgotPassword.js')
+const verifyOtp=require('./routes/VerifyOtp.js')
+const resetPassword=require('./routes/ResetPassword.js')
+
+const securePassword=require('./routes/SecurePassword.js')
 const cors=require('cors');
 app.use(cors())
 // Middleware
@@ -23,9 +31,14 @@ async function initializeDatabase() {
 
 // Call initialization
 initializeDatabase();
-app.use('/',registerRoute);
+app.use('/',profileRoute);
+app.use('/',registerRoute)
 app.use('/',loginRoute)
 app.use('/',signinGoogle)
+app.use('/',forgotPassword)
+app.use('/',verifyOtp)
+app.use('/',resetPassword)
+app.use('/',securePassword)
 
 app.get('/',(req,res)=>{
     res.send('hello from backend')

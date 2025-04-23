@@ -5,13 +5,13 @@ const otpStore=require('./otpStore')
 const UserSchema=require('../models/User')
 const nodemailer=require('nodemailer')
 require('dotenv').config();
-router.post('/register', async (req, res) => {
+router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
      try {
-    //   const user = await UserSchema.findByEmail( email );
-    //   if (!user) {
-    //     return res.status(400).json({ success: false, message: 'Email not found' });
-    //   }
+      const user = await UserSchema.findByEmail( email );
+      if (!user) {
+        return res.status(400).json({ success: false, message: 'Email not found' });
+      }
   
       const otp = Math.floor(1000 + Math.random() * 9000);  
       
@@ -42,15 +42,6 @@ router.post('/register', async (req, res) => {
         }
         res.status(200).json({success: true, message: 'OTP sent successfully' });
       });
-
-      const newUser = await UserSchema.create({
-       
-        email,
-         password: null, 
-        
-
-    });
-
     } catch (error) {
       
       res.status(500).json({ success: false, message: 'Server error',error: error.message });
@@ -58,6 +49,3 @@ router.post('/register', async (req, res) => {
 });
 
 module.exports = router;
-
-
-

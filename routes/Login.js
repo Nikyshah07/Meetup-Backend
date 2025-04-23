@@ -1,7 +1,7 @@
 const express=require('express');
 const router=express.Router();
 const UserSchema=require('../models/User.js')
-
+const jwt=require('jsonwebtoken')
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -38,13 +38,22 @@ router.post('/login', async (req, res) => {
         
         // Don't send the password and photo in response
         const { password: _, photo: __, ...userWithoutSensitiveInfo } = user;
-        
-        res.status(200).json(console.log("User logged in:", userWithoutSensitiveInfo),
-        
+        const token = jwt.sign(
             {
-            message: "Login successful",
-            user: userWithoutSensitiveInfo
-        });
+                id: user.id,
+                email: user.email,
+                auth_type: user.auth_type,
+            },
+            "abcd"
+            
+        );
+    //   res.status(200).json(console.log("User logged in:", userWithoutSensitiveInfo),
+        
+    //         {
+    //         message: "Login successful",
+    //         user: userWithoutSensitiveInfo
+    //     });
+    return res.status(200).json({message:"Login successfull..",user: userWithoutSensitiveInfo,token})
     } catch (error) {
         console.error("Login error:", error);
         res.status(500).json({ error: "Server error" });
