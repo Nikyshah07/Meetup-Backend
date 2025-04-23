@@ -1,15 +1,24 @@
 // models/User.js
 const { Pool } = require("pg");
 const bcrypt = require("bcrypt");
-require("dotenv").config();
+require("dotenv").config(); // Load environment variables
+console.log("Connecting to the database with the following credentials:");
+console.log("User:", process.env.USER);
+console.log("Host:", process.env.HOST);
+console.log("Database:", process.env.DATABASE);
+console.log("Port:", process.env.DATABASEPORT);
+// console.log(process.env);
 
 // Connection config
 const pool = new Pool({
   host: process.env.HOST,
-  user: process.env.USER,
+  user: "postgres",
   port: process.env.DATABASEPORT,
   password: process.env.PASSWORD,
   database: process.env.DATABASE,
+  ssl: {
+    rejectUnauthorized: false, // Often needed for remote connections
+  },
 });
 
 // User Schema definition
@@ -19,13 +28,16 @@ const UserSchema = {
   // Schema definition
   fields: {
     id: { type: "SERIAL", primaryKey: true },
-    username: { type: "VARCHAR(100)", default:null  },
+    username: { type: "VARCHAR(100)", default: null },
     email: { type: "VARCHAR(100)", notNull: true, unique: true },
-    password: { type: "VARCHAR(255)", default:null },
+    password: { type: "VARCHAR(255)", default: null },
     gender: { type: "VARCHAR(20)", default: null }, // NEW
     city: { type: "VARCHAR(100)", default: null }, // NEW
-    photo: { type: "TEXT" ,default:null},
+    photo: { type: "TEXT", default: null },
     auth_type: { type: "VARCHAR(20)", default: "EMAIL" },
+    is_verified: { type: "BOOLEAN", default: false }, // ✅ NEW
+    otp_entered: { type: "BOOLEAN", default: false },
+    otp: { type: "VARCHAR(10)", default: null },
     created_at: { type: "TIMESTAMP", default: "CURRENT_TIMESTAMP" },
   },
 
@@ -92,8 +104,8 @@ const UserSchema = {
   //     const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
 
   //     const result = await pool.query(
-  //       `INSERT INTO ${this.tableName} (username, email, password, photo, auth_type) 
-  //               VALUES ($1, $2, $3, $4, $5) 
+  //       `INSERT INTO ${this.tableName} (username, email, password, photo, auth_type)
+  //               VALUES ($1, $2, $3, $4, $5)
   //               RETURNING id, username, email, photo,auth_type, created_at`,
   //       [
   //         userData.username,
@@ -118,42 +130,45 @@ const UserSchema = {
       if (userData.password) {
         hashedPassword = await bcrypt.hash(userData.password, saltRounds);
       }
-  
+
       const query = `
-        INSERT INTO ${this.tableName} (username, email, password, photo, auth_type)
-        VALUES ($1, $2, $3, $4, $5)
-        RETURNING id, username, email, photo, auth_type, created_at
-      `;
-  
-      const values = [
-        userData.username || null,
-        userData.email,
-        hashedPassword,
-        userData.photo || null,
-        userData.auth_type || "EMAIL",
-      ];
-  
+      INSERT INTO ${this.tableName} (username, email, password, photo, auth_type, is_verified, otp_entered, otp)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id, username, email, photo, auth_type, is_verified, otp_entered, otp, created_at
+    `;
+    
+    const values = [
+      userData.username || null,
+      userData.email,
+      hashedPassword,
+      userData.photo || null,
+      userData.auth_type || "EMAIL",
+      userData.is_verified || false,
+      userData.otp_entered || false,
+      userData.otp || null, // <== this is now included
+    ];
+    
+
       const result = await pool.query(query, values);
-  
+
       return result.rows[0];
     } catch (error) {
       console.error("Error creating user:", error);
       throw error;
     }
   },
-  
+
   // async create(userData) {
   //   try {
-      
 
   //     const result = await pool.query(
-  //       `INSERT INTO ${this.tableName} (email) 
-  //               VALUES ($1) 
+  //       `INSERT INTO ${this.tableName} (email)
+  //               VALUES ($1)
   //               RETURNING id,  email,created_at`,
   //       [
-          
+
   //         userData.email,
-          
+
   //       ]
   //     );
 
@@ -163,7 +178,6 @@ const UserSchema = {
   //     throw error;
   //   }
   // },
-
 
   // Get all users (for admin purposes)
   async findAll() {
@@ -183,8 +197,6 @@ const UserSchema = {
     return await bcrypt.compare(plainPassword, hashedPassword);
   },
 
-
-
   async updatePassword(email, newHashedPassword) {
     try {
       const result = await pool.query(
@@ -194,7 +206,7 @@ const UserSchema = {
          RETURNING id, email`,
         [newHashedPassword, email]
       );
-      
+
       return result.rows[0] || null;
     } catch (error) {
       console.error("Error updating user password:", error);
@@ -202,13 +214,12 @@ const UserSchema = {
     }
   },
 
-
   async updateProfileByEmail(email, updatedData) {
     try {
       const fields = [];
       const values = [];
       let index = 1;
-  
+
       for (let key in updatedData) {
         if (updatedData[key] !== undefined) {
           fields.push(`${key} = $${index}`);
@@ -216,30 +227,24 @@ const UserSchema = {
           index++;
         }
       }
-  
+
       // Add email for WHERE clause
       values.push(email);
-  
+
       const query = `
         UPDATE ${this.tableName}
         SET ${fields.join(", ")}
         WHERE email = $${index}
-        RETURNING id, username, email, photo, gender, city, auth_type, created_at
+        RETURNING id, username, email, photo, gender, city, auth_type, is_verified, otp_entered, created_at
       `;
-  
+
       const result = await pool.query(query, values);
       return result.rows[0] || null;
-  
     } catch (error) {
       console.error("Error updating user profile:", error);
       throw error;
     }
-  }
-  
-  
-  
+  },
 };
 
 module.exports = UserSchema;
-
-

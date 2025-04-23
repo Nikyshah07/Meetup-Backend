@@ -8,10 +8,20 @@ require('dotenv').config();
 router.post('/register', async (req, res) => {
     const { email } = req.body;
      try {
-    //   const user = await UserSchema.findByEmail( email );
-    //   if (!user) {
-    //     return res.status(400).json({ success: false, message: 'Email not found' });
-    //   }
+      const existingUser = await UserSchema.findByEmail(email);
+
+      if (existingUser) {
+        // 🟡 User already exists, return their status
+        return res.status(200).json({
+          success: true,
+          message: 'User already registered',
+          status: {
+            otp_entered: existingUser.otp_entered,
+            is_verified: existingUser.is_verified,
+            has_password: !!existingUser.password // true if password is set
+          }
+        });
+      }
   
       const otp = Math.floor(1000 + Math.random() * 9000);  
       
@@ -34,22 +44,30 @@ router.post('/register', async (req, res) => {
         subject: 'Your OTP for Password Reset',
         text: `Your OTP is ${otp}`,
       };
-  
-      transporter.sendMail(mailOptions, (error, info) => {
+      transporter.sendMail(mailOptions, async (error, info) => {
         if (error) {
-          
           return res.status(500).json({ success: false, message: 'Failed to send OTP' });
         }
-        res.status(200).json({success: true, message: 'OTP sent successfully' });
+  
+        // Create new user in DB
+        const newUser = await UserSchema.create({
+          email,
+          password: null,
+          otp: otp,
+          otp_entered: false,
+          is_verified: false,
+        });
+  
+        res.status(200).json({
+          success: true,
+          message: 'OTP sent and user created',
+          status: {
+            otp_entered: false,
+            is_verified: false,
+            has_password: false
+          }
+        });
       });
-
-      const newUser = await UserSchema.create({
-       
-        email,
-         password: null, 
-        
-
-    });
 
     } catch (error) {
       
