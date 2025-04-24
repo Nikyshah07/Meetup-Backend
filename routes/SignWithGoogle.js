@@ -107,7 +107,8 @@ router.post('/signwithgoogle', async (req, res) => {
                 email,
                 password: 'google-oauth',  // Special marker for Google accounts
                 photo: picture,
-                auth_type: 'GOOGLE' // Set auth_type to 'google'
+                auth_type: 'GOOGLE',
+                is_verified: true // Set auth_type to 'google'
             });
         }
         
@@ -119,7 +120,8 @@ router.post('/signwithgoogle', async (req, res) => {
                 username: user.username,
                 email: user.email,
                 photo: user.photo,
-                auth_type: user.auth_type
+                auth_type: user.auth_type,
+                is_verified: user.is_verified,
             }
         });
     } catch (error) {

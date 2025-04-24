@@ -7,72 +7,78 @@ const nodemailer=require('nodemailer')
 require('dotenv').config();
 router.post('/register', async (req, res) => {
     const { email } = req.body;
-     try {
-      const existingUser = await UserSchema.findByEmail(email);
+  
+try {
+  const existingUser = await UserSchema.findByEmail(email);
 
-      if (existingUser) {
-        // 🟡 User already exists, return their status
-        return res.status(200).json({
-          success: true,
-          message: 'User already registered',
-          status: {
-            otp_entered: existingUser.otp_entered,
-            is_verified: existingUser.is_verified,
-            has_password: !!existingUser.password // true if password is set
-          }
-        });
-      }
-  
-      const otp = Math.floor(1000 + Math.random() * 9000);  
-      
-      const expirationTime = Date.now() + 2 * 60 * 1000; 
+  const otp = Math.floor(1000 + Math.random() * 9000);
+  const expirationTime = Date.now() + 2 * 60 * 1000;
+  otpStore[email] = { otp, expires: expirationTime };
 
-      
-      otpStore[email] = { otp, expires: expirationTime };  
-  
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: process.env.EMAIL,  
-          pass: process.env.EMAIL_PASSWORD, 
-        },
-      });
-  
-      const mailOptions = {
-        from: process.env.EMAIL,
-        to: email,
-        subject: 'Your OTP for Password Reset',
-        text: `Your OTP is ${otp}`,
-      };
-      transporter.sendMail(mailOptions, async (error, info) => {
-        if (error) {
-          return res.status(500).json({ success: false, message: 'Failed to send OTP' });
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL,
+      pass: process.env.EMAIL_PASSWORD,
+    },
+  });
+
+  const mailOptions = {
+    from: process.env.EMAIL,
+    to: email,
+    subject: 'Your OTP for Password Reset',
+    text: `Your OTP is ${otp}`,
+  };
+
+  await transporter.sendMail(mailOptions);
+
+  if (existingUser) {
+    if (existingUser.is_verified) {
+      return res.status(200).json({
+        success: true,
+        message: 'User already registered. Please log in',
+        status: {
+          is_verified: true,
         }
-  
-        // Create new user in DB
-        const newUser = await UserSchema.create({
-          email,
-          password: null,
-          otp: otp,
-          otp_entered: false,
-          is_verified: false,
-        });
-  
-        res.status(200).json({
-          success: true,
-          message: 'OTP sent and user created',
-          status: {
-            otp_entered: false,
-            is_verified: false,
-            has_password: false
-          }
-        });
       });
-
-    } catch (error) {
-      
-      res.status(500).json({ success: false, message: 'Server error',error: error.message });
     }
+
+    // 🛠 UPDATE OTP if user exists but is not verified
+    await UserSchema.updateProfileByEmail(email, {
+      otp,
+      password: null,
+      is_verified: false,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'OTP re-sent to existing unverified user',
+      status: {
+        is_verified: false,
+      }
+    });
+  }
+
+  // ✅ NEW USER creation
+  await UserSchema.create({
+    email,
+    password: null,
+    otp,
+    is_verified: false,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: 'OTP sent successfully',
+    status: {
+      is_verified: false,
+    }
+  });
+
+} catch (error) {
+  console.error("Error in /register route:", error);
+  res.status(500).json({ success: false, message: 'Server error', error: error.message });
+}
 });
 
 module.exports = router;

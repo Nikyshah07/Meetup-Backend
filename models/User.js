@@ -36,7 +36,6 @@ const UserSchema = {
     photo: { type: "TEXT", default: null },
     auth_type: { type: "VARCHAR(20)", default: "EMAIL" },
     is_verified: { type: "BOOLEAN", default: false }, // ✅ NEW
-    otp_entered: { type: "BOOLEAN", default: false },
     otp: { type: "VARCHAR(10)", default: null },
     created_at: { type: "TIMESTAMP", default: "CURRENT_TIMESTAMP" },
   },
@@ -132,9 +131,9 @@ const UserSchema = {
       }
 
       const query = `
-      INSERT INTO ${this.tableName} (username, email, password, photo, auth_type, is_verified, otp_entered, otp)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING id, username, email, photo, auth_type, is_verified, otp_entered, otp, created_at
+      INSERT INTO ${this.tableName} (username, email, password, photo, auth_type, is_verified, otp)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING id, username, email, photo, auth_type, is_verified, otp, created_at
     `;
     
     const values = [
@@ -144,7 +143,6 @@ const UserSchema = {
       userData.photo || null,
       userData.auth_type || "EMAIL",
       userData.is_verified || false,
-      userData.otp_entered || false,
       userData.otp || null, // <== this is now included
     ];
     
@@ -235,7 +233,7 @@ const UserSchema = {
         UPDATE ${this.tableName}
         SET ${fields.join(", ")}
         WHERE email = $${index}
-        RETURNING id, username, email, photo, gender, city, auth_type, is_verified, otp_entered, created_at
+        RETURNING id, username, email, photo, gender, city, auth_type, is_verified, created_at
       `;
 
       const result = await pool.query(query, values);
