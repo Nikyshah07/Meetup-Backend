@@ -12,6 +12,7 @@ const verifyOtp=require('./routes/VerifyOtp.js')
 const resetPassword=require('./routes/ResetPassword.js')
 
 const securePassword=require('./routes/SecurePassword.js')
+const event=require('./routes/events.js')
 const cors=require('cors');
 app.use(cors())
 // Middleware
@@ -39,6 +40,7 @@ app.use('/',forgotPassword)
 app.use('/',verifyOtp)
 app.use('/',resetPassword)
 app.use('/',securePassword)
+app.use('/',event)
 
 app.get('/',(req,res)=>{
     res.send('hello from backend')
