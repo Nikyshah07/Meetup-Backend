@@ -11,21 +11,20 @@ require("dotenv").config(); // Load environment variables
 //   database: process.env.DATABASE,
 //   ssl: {
 //     rejectUnauthorized: false, // Often needed for remote connections
-//   },
+//   },Terminal: Select Default Profile
 // });
 
 const pool = new Pool({
   host: process.env.HOST,
-  user:process.env.USER,
+  user: process.env.USER,
   port: process.env.DATABASEPORT,
   password: process.env.PASSWORD,
   database: process.env.DATABASE,
- ssl: {
-     require: true,              // ✅ Important for Neon
-    rejectUnauthorized: false   // allows self-signed certs
-  },  // 👈 this disables SSL
+  ssl: {
+    require: true, // ✅ Important for Neon
+    rejectUnauthorized: false, // allows self-signed certs
+  }, // 👈 this disables SSL
 });
-
 
 // Event Schema definition
 const EventSchema = {
@@ -36,21 +35,20 @@ const EventSchema = {
     id: { type: "SERIAL", primaryKey: true },
     name: { type: "VARCHAR(255)", notNull: true },
     host_ids: { type: "INTEGER[]", notNull: true }, // Array of user IDs as hosts
-    // host_images: { type: "BYTEA[]", default: "ARRAY[]::BYTEA[]" }, 
+    // host_images: { type: "BYTEA[]", default: "ARRAY[]::BYTEA[]" },
     description: { type: "TEXT", default: null },
     event_date: { type: "DATE", notNull: true },
     event_time: { type: "TIME", notNull: true },
-    // tags: { type: "VARCHAR(100)[]", default: "ARRAY[]::VARCHAR[]" }, 
+    // tags: { type: "VARCHAR(100)[]", default: "ARRAY[]::VARCHAR[]" },
     is_virtual: { type: "BOOLEAN", default: false },
     location: { type: "VARCHAR(255)", default: null }, // Physical location or virtual meeting link
     capacity: { type: "INTEGER", default: 0 },
     current_registrations: { type: "INTEGER", default: 0 },
     social_links: { type: "JSONB", default: "'{}'" }, // Store as JSON
     // gallery: { type: "BYTEA[]", default: "ARRAY[]::BYTEA[]" },
-host_images: { type: "BYTEA[]", default: "'{}'::BYTEA[]" },
-tags: { type: "VARCHAR(100)[]", default: "'{}'::VARCHAR[]" },
-gallery: { type: "BYTEA[]", default: "'{}'::BYTEA[]" },
-
+    host_images: { type: "BYTEA[]", default: "'{}'::BYTEA[]" },
+    tags: { type: "VARCHAR(100)[]", default: "'{}'::VARCHAR[]" },
+    gallery: { type: "BYTEA[]", default: "'{}'::BYTEA[]" },
 
     fee: { type: "NUMERIC(10,2)", default: 0 },
     payment_qr: { type: "BYTEA", default: null }, // QR code image as binary data
@@ -73,36 +71,37 @@ gallery: { type: "BYTEA[]", default: "'{}'::BYTEA[]" },
     //   })
     //   .join(", ");
 
-const fieldDefinitions = Object.entries(this.fields)
-  .map(([fieldName, attributes]) => {
-    let definition = `${fieldName} ${attributes.type}`;
+    const fieldDefinitions = Object.entries(this.fields)
+      .map(([fieldName, attributes]) => {
+        let definition = `${fieldName} ${attributes.type}`;
 
-    if (attributes.primaryKey) definition += " PRIMARY KEY";
-    if (attributes.notNull) definition += " NOT NULL";
-    if (attributes.unique) definition += " UNIQUE";
+        if (attributes.primaryKey) definition += " PRIMARY KEY";
+        if (attributes.notNull) definition += " NOT NULL";
+        if (attributes.unique) definition += " UNIQUE";
 
-    if (attributes.default !== undefined) {
-      // If default looks like a PostgreSQL expression (has quotes and casting), just add as is
-      if (
-        typeof attributes.default === "string" &&
-        (attributes.default.includes("'") || attributes.default.includes("::") || attributes.default.includes("CURRENT_TIMESTAMP"))
-      ) {
-        definition += ` DEFAULT ${attributes.default}`;
-      }
-      // For plain string default values (without quotes), wrap with single quotes
-      else if (typeof attributes.default === "string") {
-        definition += ` DEFAULT '${attributes.default}'`;
-      }
-      // For other types (numbers, booleans), add as is
-      else {
-        definition += ` DEFAULT ${attributes.default}`;
-      }
-    }
+        if (attributes.default !== undefined) {
+          // If default looks like a PostgreSQL expression (has quotes and casting), just add as is
+          if (
+            typeof attributes.default === "string" &&
+            (attributes.default.includes("'") ||
+              attributes.default.includes("::") ||
+              attributes.default.includes("CURRENT_TIMESTAMP"))
+          ) {
+            definition += ` DEFAULT ${attributes.default}`;
+          }
+          // For plain string default values (without quotes), wrap with single quotes
+          else if (typeof attributes.default === "string") {
+            definition += ` DEFAULT '${attributes.default}'`;
+          }
+          // For other types (numbers, booleans), add as is
+          else {
+            definition += ` DEFAULT ${attributes.default}`;
+          }
+        }
 
-    return definition;
-  })
-  .join(", ");
-
+        return definition;
+      })
+      .join(", ");
 
     const query = `CREATE TABLE IF NOT EXISTS ${this.tableName} (${fieldDefinitions})`;
 
@@ -119,13 +118,15 @@ const fieldDefinitions = Object.entries(this.fields)
   // Create new event
   async create(eventData) {
     try {
-      const fields = Object.keys(eventData).filter(key => eventData[key] !== undefined);
+      const fields = Object.keys(eventData).filter(
+        (key) => eventData[key] !== undefined
+      );
       const placeholders = fields.map((_, index) => `$${index + 1}`);
-      const values = fields.map(field => eventData[field]);
+      const values = fields.map((field) => eventData[field]);
 
       const query = `
-        INSERT INTO ${this.tableName} (${fields.join(', ')})
-        VALUES (${placeholders.join(', ')})
+        INSERT INTO ${this.tableName} (${fields.join(", ")})
+        VALUES (${placeholders.join(", ")})
         RETURNING *
       `;
 
@@ -253,7 +254,7 @@ const fieldDefinitions = Object.entries(this.fields)
         WHERE id = $2
         RETURNING id
       `;
-      
+
       const result = await pool.query(query, [imageData, id]);
       return result.rows[0] || null;
     } catch (error) {
@@ -271,7 +272,7 @@ const fieldDefinitions = Object.entries(this.fields)
         WHERE id = $2
         RETURNING id
       `;
-      
+
       const result = await pool.query(query, [imageData, id]);
       return result.rows[0] || null;
     } catch (error) {
@@ -289,7 +290,7 @@ const fieldDefinitions = Object.entries(this.fields)
         WHERE id = $2
         RETURNING id
       `;
-      
+
       const result = await pool.query(query, [qrImageData, id]);
       return result.rows[0] || null;
     } catch (error) {
@@ -428,7 +429,7 @@ const fieldDefinitions = Object.entries(this.fields)
       console.error("Error searching events:", error);
       throw error;
     }
-  }
+  },
 };
 
 module.exports = EventSchema;

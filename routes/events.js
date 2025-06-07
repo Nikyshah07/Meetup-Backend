@@ -130,6 +130,10 @@ router.post('/createEvent', authenticate, upload.fields([
         }
       }
       
+
+      
+
+
       // Process gallery images
       if (req.files.galleryImages && req.files.galleryImages.length > 0) {
         for (const file of req.files.galleryImages) {
@@ -145,10 +149,11 @@ router.post('/createEvent', authenticate, upload.fields([
 
     // Return the created event without binary data
     const createdEvent = await EventSchema.findById(event.id);
-    // Remove binary data from response
-    delete createdEvent.host_images;
-    delete createdEvent.gallery;
-    delete createdEvent.payment_qr;
+    createdEvent.host_images = req.body.host_images 
+  ? JSON.parse(req.body.host_images) 
+  : [];
+createdEvent.gallery = req.body.gallery || [];
+createdEvent.payment_qr = req.body.payment_qr || null;
 
     res.status(201).json({
       message: "Event created successfully",
@@ -167,8 +172,21 @@ router.get('/getEvent', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const offset = (page - 1) * limit;
 
+    // const events = await EventSchema.findAll(limit, offset);
+    // res.status(200).json(events);
+
     const events = await EventSchema.findAll(limit, offset);
-    res.status(200).json(events);
+
+// Normalize image fields: always return them even if empty
+const formattedEvents = events.map(event => ({
+  ...event,
+  host_images: event.host_images || [],
+  gallery: event.gallery || [],
+  payment_qr: event.payment_qr || null
+}));
+
+res.status(200).json(formattedEvents);
+
   } catch (error) {
     console.error("Error fetching events:", error);
     res.status(500).json({ error: "Server error" });
