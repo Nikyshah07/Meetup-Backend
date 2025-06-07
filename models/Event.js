@@ -16,11 +16,14 @@ require("dotenv").config(); // Load environment variables
 
 const pool = new Pool({
   host: process.env.HOST,
-  user: "postgres",
+  user:process.env.USER,
   port: process.env.DATABASEPORT,
   password: process.env.PASSWORD,
   database: process.env.DATABASE,
-  ssl: false, // 👈 this disables SSL
+ ssl: {
+     require: true,              // ✅ Important for Neon
+    rejectUnauthorized: false   // allows self-signed certs
+  },  // 👈 this disables SSL
 });
 
 
