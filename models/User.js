@@ -23,7 +23,7 @@ console.log("Port:", process.env.DATABASEPORT);
 
 const pool = new Pool({
   host: process.env.HOST,
-  user: "postgres",
+  user:process.env.USER,
   port: process.env.DATABASEPORT,
   password: process.env.PASSWORD,
   database: process.env.DATABASE,
