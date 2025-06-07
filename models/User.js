@@ -27,7 +27,9 @@ const pool = new Pool({
   port: process.env.DATABASEPORT,
   password: process.env.PASSWORD,
   database: process.env.DATABASE,
-  ssl: false, // 👈 this disables SSL
+ ssl: {
+    rejectUnauthorized: false,  // allows self-signed certs
+  }, // 👈 this disables SSL
 });
 
 
