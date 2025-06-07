@@ -28,7 +28,8 @@ const pool = new Pool({
   password: process.env.PASSWORD,
   database: process.env.DATABASE,
  ssl: {
-    rejectUnauthorized: false,  // allows self-signed certs
+     require: true,              // ✅ Important for Neon
+    rejectUnauthorized: false   // allows self-signed certs
   }, // 👈 this disables SSL
 });
 
