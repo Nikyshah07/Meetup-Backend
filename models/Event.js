@@ -3,16 +3,26 @@ const { Pool } = require("pg");
 require("dotenv").config(); // Load environment variables
 
 // Connection config - using the same pool as User model
+// const pool = new Pool({
+//   host: process.env.HOST,
+//   user: "postgres",
+//   port: process.env.DATABASEPORT,
+//   password: process.env.PASSWORD,
+//   database: process.env.DATABASE,
+//   ssl: {
+//     rejectUnauthorized: false, // Often needed for remote connections
+//   },
+// });
+
 const pool = new Pool({
   host: process.env.HOST,
   user: "postgres",
   port: process.env.DATABASEPORT,
   password: process.env.PASSWORD,
   database: process.env.DATABASE,
-  ssl: {
-    rejectUnauthorized: false, // Often needed for remote connections
-  },
+  ssl: false, // 👈 this disables SSL
 });
+
 
 // Event Schema definition
 const EventSchema = {
@@ -23,17 +33,22 @@ const EventSchema = {
     id: { type: "SERIAL", primaryKey: true },
     name: { type: "VARCHAR(255)", notNull: true },
     host_ids: { type: "INTEGER[]", notNull: true }, // Array of user IDs as hosts
-    host_images: { type: "BYTEA[]", default: "ARRAY[]::BYTEA[]" }, // Store images directly in DB as binary data
+    // host_images: { type: "BYTEA[]", default: "ARRAY[]::BYTEA[]" }, 
     description: { type: "TEXT", default: null },
     event_date: { type: "DATE", notNull: true },
     event_time: { type: "TIME", notNull: true },
-    tags: { type: "VARCHAR(100)[]", default: "ARRAY[]::VARCHAR[]" }, // Array of tags
+    // tags: { type: "VARCHAR(100)[]", default: "ARRAY[]::VARCHAR[]" }, 
     is_virtual: { type: "BOOLEAN", default: false },
     location: { type: "VARCHAR(255)", default: null }, // Physical location or virtual meeting link
     capacity: { type: "INTEGER", default: 0 },
     current_registrations: { type: "INTEGER", default: 0 },
     social_links: { type: "JSONB", default: "'{}'" }, // Store as JSON
-    gallery: { type: "BYTEA[]", default: "ARRAY[]::BYTEA[]" }, // Store images directly in DB as binary data
+    // gallery: { type: "BYTEA[]", default: "ARRAY[]::BYTEA[]" },
+host_images: { type: "BYTEA[]", default: "'{}'::BYTEA[]" },
+tags: { type: "VARCHAR(100)[]", default: "'{}'::VARCHAR[]" },
+gallery: { type: "BYTEA[]", default: "'{}'::BYTEA[]" },
+
+
     fee: { type: "NUMERIC(10,2)", default: 0 },
     payment_qr: { type: "BYTEA", default: null }, // QR code image as binary data
     created_at: { type: "TIMESTAMP", default: "CURRENT_TIMESTAMP" },
@@ -42,18 +57,49 @@ const EventSchema = {
 
   // Create the table
   async createTable() {
-    const fieldDefinitions = Object.entries(this.fields)
-      .map(([fieldName, attributes]) => {
-        let definition = `${fieldName} ${attributes.type}`;
+    // const fieldDefinitions = Object.entries(this.fields)
+    //   .map(([fieldName, attributes]) => {
+    //     let definition = `${fieldName} ${attributes.type}`;
 
-        if (attributes.primaryKey) definition += " PRIMARY KEY";
-        if (attributes.notNull) definition += " NOT NULL";
-        if (attributes.unique) definition += " UNIQUE";
-        if (attributes.default) definition += ` DEFAULT ${attributes.default}`;
+    //     if (attributes.primaryKey) definition += " PRIMARY KEY";
+    //     if (attributes.notNull) definition += " NOT NULL";
+    //     if (attributes.unique) definition += " UNIQUE";
+    //     if (attributes.default) definition += ` DEFAULT ${attributes.default}`;
 
-        return definition;
-      })
-      .join(", ");
+    //     return definition;
+    //   })
+    //   .join(", ");
+
+const fieldDefinitions = Object.entries(this.fields)
+  .map(([fieldName, attributes]) => {
+    let definition = `${fieldName} ${attributes.type}`;
+
+    if (attributes.primaryKey) definition += " PRIMARY KEY";
+    if (attributes.notNull) definition += " NOT NULL";
+    if (attributes.unique) definition += " UNIQUE";
+
+    if (attributes.default !== undefined) {
+      // If default looks like a PostgreSQL expression (has quotes and casting), just add as is
+      if (
+        typeof attributes.default === "string" &&
+        (attributes.default.includes("'") || attributes.default.includes("::") || attributes.default.includes("CURRENT_TIMESTAMP"))
+      ) {
+        definition += ` DEFAULT ${attributes.default}`;
+      }
+      // For plain string default values (without quotes), wrap with single quotes
+      else if (typeof attributes.default === "string") {
+        definition += ` DEFAULT '${attributes.default}'`;
+      }
+      // For other types (numbers, booleans), add as is
+      else {
+        definition += ` DEFAULT ${attributes.default}`;
+      }
+    }
+
+    return definition;
+  })
+  .join(", ");
+
 
     const query = `CREATE TABLE IF NOT EXISTS ${this.tableName} (${fieldDefinitions})`;
 

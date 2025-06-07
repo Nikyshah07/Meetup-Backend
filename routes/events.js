@@ -175,4 +175,42 @@ router.get('/getEvent', async (req, res) => {
   }
 });
 
+
+// Add this to your routes/events.js file
+
+// Delete event
+router.delete('/deleteEvent/:id', authenticate, async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const userId = req.user.id;
+    
+    // First check if event exists
+    const event = await EventSchema.findById(eventId);
+    
+    if (!event) {
+      return res.status(404).json({ error: "Event not found" });
+    }
+    
+    // Check if the user is one of the hosts of the event
+    if (!event.host_ids.includes(userId)) {
+      return res.status(403).json({ error: "You don't have permission to delete this event" });
+    }
+    
+    // Proceed with deletion
+    const result = await EventSchema.delete(eventId);
+    
+    if (!result) {
+      return res.status(404).json({ error: "Event not found or already deleted" });
+    }
+    
+    res.status(200).json({ 
+      message: "Event deleted successfully",
+      deletedEventId: eventId
+    });
+  } catch (error) {
+    console.error("Error deleting event:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 module.exports=router

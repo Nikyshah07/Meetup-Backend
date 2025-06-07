@@ -10,16 +10,26 @@ console.log("Port:", process.env.DATABASEPORT);
 // console.log(process.env);
 
 // Connection config
+// const pool = new Pool({
+//   host: process.env.HOST,
+//   user: "postgres",
+//   port: process.env.DATABASEPORT,
+//   password: process.env.PASSWORD,
+//   database: process.env.DATABASE,
+//   ssl: {
+//     rejectUnauthorized: false, // Often needed for remote connections
+//   },
+// });
+
 const pool = new Pool({
   host: process.env.HOST,
   user: "postgres",
   port: process.env.DATABASEPORT,
   password: process.env.PASSWORD,
   database: process.env.DATABASE,
-  ssl: {
-    rejectUnauthorized: false, // Often needed for remote connections
-  },
+  ssl: false, // 👈 this disables SSL
 });
+
 
 // User Schema definition
 const UserSchema = {
@@ -42,18 +52,46 @@ const UserSchema = {
 
   // Create the table
   async createTable() {
-    const fieldDefinitions = Object.entries(this.fields)
-      .map(([fieldName, attributes]) => {
-        let definition = `${fieldName} ${attributes.type}`;
 
-        if (attributes.primaryKey) definition += " PRIMARY KEY";
-        // if (attributes.notNull) definition += " NOT NULL";
-        if (attributes.unique) definition += " UNIQUE";
-        if (attributes.default) definition += ` DEFAULT ${attributes.default}`;
 
-        return definition;
-      })
-      .join(", ");
+    // const fieldDefinitions = Object.entries(this.fields)
+    //   .map(([fieldName, attributes]) => {
+    //     let definition = `${fieldName} ${attributes.type}`;
+
+    //     if (attributes.primaryKey) definition += " PRIMARY KEY";
+    //     // if (attributes.notNull) definition += " NOT NULL";
+    //     if (attributes.unique) definition += " UNIQUE";
+    //     if (attributes.default) definition += ` DEFAULT ${attributes.default}`;
+
+    //     return definition;
+    //   })
+    //   .join(", ");
+
+const fieldDefinitions = Object.entries(this.fields)
+  .map(([fieldName, attributes]) => {
+    let definition = `${fieldName} ${attributes.type}`;
+
+    if (attributes.primaryKey) definition += " PRIMARY KEY";
+    // if (attributes.notNull) definition += " NOT NULL";
+    if (attributes.unique) definition += " UNIQUE";
+
+    if (attributes.default !== undefined) {
+      // Handle string values (wrap in single quotes), except CURRENT_TIMESTAMP
+      if (
+        typeof attributes.default === 'string' &&
+        !attributes.default.includes('CURRENT_TIMESTAMP') &&
+        attributes.type.toUpperCase().startsWith("VARCHAR")
+      ) {
+        definition += ` DEFAULT '${attributes.default}'`;
+      } else {
+        definition += ` DEFAULT ${attributes.default}`;
+      }
+    }
+
+    return definition;
+  })
+  .join(", ");
+
 
     const query = `CREATE TABLE IF NOT EXISTS ${this.tableName} (${fieldDefinitions})`;
 
