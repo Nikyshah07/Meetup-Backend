@@ -1,8 +1,6 @@
-// routes/events.js
 const express = require('express');
 const router = express.Router();
 const EventSchema = require('../models/Event.js');
-const UserSchema = require('../models/User.js');
 const authenticate = require('../middlewares/authenticate.js');
 const multer = require('multer');
 
@@ -20,7 +18,7 @@ const upload = multer({
   }
 });
 
-// Create new event
+// Create new event - Fixed to use snake_case consistently
 router.post('/createEvent', authenticate, upload.fields([
   { name: 'hostImages', maxCount: 5 },
   { name: 'galleryImages', maxCount: 10 },
@@ -29,40 +27,62 @@ router.post('/createEvent', authenticate, upload.fields([
   try {
     const userId = req.user.id;
     const {
-      name,
-      coHostIds,
+      event_name,
+      co_host_ids,
       description,
-      eventDate,
-      eventTime,
-      tags,
-      isVirtual,
-      location,
+      event_date,
+      event_time,
+      is_virtual,
+      venue_name,
+      venue_address,
       capacity,
-      socialLinks,
-      fee
+      
+      // Pricing
+      ticket_price,
+      early_bird_price,
+      early_bird_deadline,
+      group_discount_price,
+      group_discount_min_size,
+      
+      // Contact and social
+      contact_email,
+      contact_phone,
+      website_url,
+      facebook_url,
+      twitter_url,
+      instagram_url,
+      linkedin_url,
+      
+      // Additional details
+      tags,
+      category,
+      target_audience,
+      dress_code,
+      special_instructions
     } = req.body;
 
     // Basic validation
-    if (!name || !eventDate || !eventTime) {
+    if (!event_name || !event_date || !event_time) {
       return res.status(400).json({ error: "Event name, date and time are required" });
     }
 
     // Format host IDs array
     let hostIds = [userId];
-    if (coHostIds) {
-      // Add co-hosts if provided
-      if (typeof coHostIds === 'string') {
+    if (co_host_ids) {
+      if (typeof co_host_ids === 'string') {
         try {
-          const parsedCoHosts = JSON.parse(coHostIds);
+          const parsedCoHosts = JSON.parse(co_host_ids);
           if (Array.isArray(parsedCoHosts)) {
             hostIds = [...hostIds, ...parsedCoHosts];
           }
         } catch (e) {
-          // If not JSON, treat as single ID
-          hostIds.push(parseInt(coHostIds));
+          const coHostId = parseInt(co_host_ids);
+          if (!isNaN(coHostId)) {
+            hostIds.push(coHostId);
+          }
         }
-      } else if (Array.isArray(coHostIds)) {
-        hostIds = [...hostIds, ...coHostIds];
+      } else if (Array.isArray(co_host_ids)) {
+        hostIds = [...hostIds, ...co_host_ids.map(id => parseInt(id)).filter(id => !isNaN(id))];
       }
     }
 
@@ -78,7 +98,6 @@ router.post('/createEvent', authenticate, upload.fields([
             formattedTags = tags.split(',').map(tag => tag.trim());
           }
         } catch (e) {
-          // If not JSON, treat as comma-separated
           formattedTags = tags.split(',').map(tag => tag.trim());
         }
       } else if (Array.isArray(tags)) {
@@ -86,36 +105,41 @@ router.post('/createEvent', authenticate, upload.fields([
       }
     }
 
-    // Handle social links
-    let formattedSocialLinks = {};
-    if (socialLinks) {
-      if (typeof socialLinks === 'string') {
-        try {
-          formattedSocialLinks = JSON.parse(socialLinks);
-        } catch (e) {
-          return res.status(400).json({ error: "Invalid social links format" });
-        }
-      } else if (typeof socialLinks === 'object') {
-        formattedSocialLinks = socialLinks;
-      }
-    }
-
-    // Create event object without images first
+    // Create event object using snake_case column names consistently
     const eventData = {
-      name,
+      event_name,
       host_ids: hostIds,
       description,
-      event_date: eventDate,
-      event_time: eventTime,
-      tags: formattedTags,
-      is_virtual: isVirtual === 'true' || isVirtual === true,
-      location,
+      event_date,
+      event_time,
+      is_virtual: is_virtual === 'true' || is_virtual === true,
+      venue_name: venue_name || null,
+      venue_address: venue_address || null,
       capacity: parseInt(capacity) || 0,
       current_registrations: 0,
-      social_links: formattedSocialLinks,
-      fee: parseFloat(fee) || 0,
-      host_images: [], // Will add images after creating event
-      gallery: [], // Will add images after creating event
+      
+      // Pricing fields
+      ticket_price: parseFloat(ticket_price) || 0,
+      early_bird_price: early_bird_price ? parseFloat(early_bird_price) : null,
+      early_bird_deadline: early_bird_deadline || null,
+      group_discount_price: group_discount_price ? parseFloat(group_discount_price) : null,
+      group_discount_min_size: group_discount_min_size ? parseInt(group_discount_min_size) : null,
+      
+      // Contact and social
+      contact_email: contact_email || null,
+      contact_phone: contact_phone || null,
+      website_url: website_url || null,
+      facebook_url: facebook_url || null,
+      twitter_url: twitter_url || null,
+      instagram_url: instagram_url || null,
+      linkedin_url: linkedin_url || null,
+      
+      // Additional details
+      tags: formattedTags,
+      category: category || null,
+      target_audience: target_audience || null,
+      dress_code: dress_code || null,
+      special_instructions: special_instructions || null,
     };
 
     // Create the event
@@ -130,10 +154,6 @@ router.post('/createEvent', authenticate, upload.fields([
         }
       }
       
-
-      
-
-
       // Process gallery images
       if (req.files.galleryImages && req.files.galleryImages.length > 0) {
         for (const file of req.files.galleryImages) {
@@ -147,21 +167,25 @@ router.post('/createEvent', authenticate, upload.fields([
       }
     }
 
-    // Return the created event without binary data
+    // Return the created event
     const createdEvent = await EventSchema.findById(event.id);
-    createdEvent.host_images = req.body.host_images 
-  ? JSON.parse(req.body.host_images) 
-  : [];
-createdEvent.gallery = req.body.gallery || [];
-createdEvent.payment_qr = req.body.payment_qr || null;
+    
+    // Format response without binary data
+    const responseEvent = {
+      ...createdEvent,
+      // Remove binary data for response
+      host_images: createdEvent.host_images ? createdEvent.host_images.length : 0,
+      event_gallery: createdEvent.event_gallery ? createdEvent.event_gallery.length : 0,
+      payment_qr: createdEvent.payment_qr ? 'uploaded' : null
+    };
 
     res.status(201).json({
       message: "Event created successfully",
-      event: createdEvent
+      event: responseEvent
     });
   } catch (error) {
     console.error("Event creation error:", error);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: "Server error", details: error.message });
   }
 });
 
@@ -172,20 +196,18 @@ router.get('/getEvent', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const offset = (page - 1) * limit;
 
-    // const events = await EventSchema.findAll(limit, offset);
-    // res.status(200).json(events);
-
     const events = await EventSchema.findAll(limit, offset);
 
-// Normalize image fields: always return them even if empty
-const formattedEvents = events.map(event => ({
-  ...event,
-  host_images: event.host_images || [],
-  gallery: event.gallery || [],
-  payment_qr: event.payment_qr || null
-}));
+    // Format events for response
+    const formattedEvents = events.map(event => ({
+      ...event,
+      // Format binary data info
+      host_images: event.host_images ? event.host_images.length : 0,
+      event_gallery: event.event_gallery ? event.event_gallery.length : 0,
+      payment_qr: event.payment_qr ? 'available' : null
+    }));
 
-res.status(200).json(formattedEvents);
+    res.status(200).json(formattedEvents);
 
   } catch (error) {
     console.error("Error fetching events:", error);
@@ -193,8 +215,200 @@ res.status(200).json(formattedEvents);
   }
 });
 
+// Get single event by ID
+router.get('/getEvent/:id', async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const event = await EventSchema.findById(eventId);
+    
+    if (!event) {
+      return res.status(404).json({ error: "Event not found" });
+    }
 
-// Add this to your routes/events.js file
+    // Format event for response
+    const formattedEvent = {
+      ...event,
+      // Format binary data info
+      host_images: event.host_images ? event.host_images.length : 0,
+      event_gallery: event.event_gallery ? event.event_gallery.length : 0,
+      payment_qr: event.payment_qr ? 'available' : null
+    };
+
+    res.status(200).json(formattedEvent);
+  } catch (error) {
+    console.error("Error fetching event:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Update event
+router.put('/updateEvent/:id', authenticate, upload.fields([
+  { name: 'hostImages', maxCount: 5 },
+  { name: 'galleryImages', maxCount: 10 },
+  { name: 'paymentQr', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const userId = req.user.id;
+    
+    // Check if event exists and user has permission
+    const existingEvent = await EventSchema.findById(eventId);
+    if (!existingEvent) {
+      return res.status(404).json({ error: "Event not found" });
+    }
+    
+    if (!existingEvent.host_ids.includes(userId)) {
+      return res.status(403).json({ error: "You don't have permission to update this event" });
+    }
+
+    const {
+      event_name,
+      co_host_ids,
+      description,
+      event_date,
+      event_time,
+      is_virtual,
+      venue_name,
+      venue_address,
+      capacity,
+      ticket_price,
+      early_bird_price,
+      early_bird_deadline,
+      group_discount_price,
+      group_discount_min_size,
+      contact_email,
+      contact_phone,
+      website_url,
+      facebook_url,
+      twitter_url,
+      instagram_url,
+      linkedin_url,
+      tags,
+      category,
+      target_audience,
+      dress_code,
+      special_instructions
+    } = req.body;
+
+    // Format host IDs array if provided
+    let hostIds = existingEvent.host_ids;
+    if (co_host_ids !== undefined) {
+      hostIds = [userId]; // Always include current user
+      if (co_host_ids) {
+        if (typeof co_host_ids === 'string') {
+          try {
+            const parsedCoHosts = JSON.parse(co_host_ids);
+            if (Array.isArray(parsedCoHosts)) {
+              hostIds = [...hostIds, ...parsedCoHosts];
+            }
+          } catch (e) {
+            const coHostId = parseInt(co_host_ids);
+            if (!isNaN(coHostId)) {
+              hostIds.push(coHostId);
+            }
+          }
+        } else if (Array.isArray(co_host_ids)) {
+          hostIds = [...hostIds, ...co_host_ids.map(id => parseInt(id)).filter(id => !isNaN(id))];
+        }
+      }
+    }
+
+    // Format tags array if provided
+    let formattedTags = existingEvent.tags;
+    if (tags !== undefined) {
+      formattedTags = [];
+      if (tags) {
+        if (typeof tags === 'string') {
+          try {
+            const parsedTags = JSON.parse(tags);
+            if (Array.isArray(parsedTags)) {
+              formattedTags = parsedTags;
+            } else {
+              formattedTags = tags.split(',').map(tag => tag.trim());
+            }
+          } catch (e) {
+            formattedTags = tags.split(',').map(tag => tag.trim());
+          }
+        } else if (Array.isArray(tags)) {
+          formattedTags = tags;
+        }
+      }
+    }
+
+    // Create update object using snake_case column names consistently
+    const updateData = {};
+    
+    if (event_name !== undefined) updateData.event_name = event_name;
+    if (description !== undefined) updateData.description = description;
+    if (event_date !== undefined) updateData.event_date = event_date;
+    if (event_time !== undefined) updateData.event_time = event_time;
+    if (is_virtual !== undefined) updateData.is_virtual = is_virtual === 'true' || is_virtual === true;
+    if (venue_name !== undefined) updateData.venue_name = venue_name;
+    if (venue_address !== undefined) updateData.venue_address = venue_address;
+    if (capacity !== undefined) updateData.capacity = parseInt(capacity) || 0;
+    if (ticket_price !== undefined) updateData.ticket_price = parseFloat(ticket_price) || 0;
+    if (early_bird_price !== undefined) updateData.early_bird_price = early_bird_price ? parseFloat(early_bird_price) : null;
+    if (early_bird_deadline !== undefined) updateData.early_bird_deadline = early_bird_deadline;
+    if (group_discount_price !== undefined) updateData.group_discount_price = group_discount_price ? parseFloat(group_discount_price) : null;
+    if (group_discount_min_size !== undefined) updateData.group_discount_min_size = group_discount_min_size ? parseInt(group_discount_min_size) : null;
+    if (contact_email !== undefined) updateData.contact_email = contact_email;
+    if (contact_phone !== undefined) updateData.contact_phone = contact_phone;
+    if (website_url !== undefined) updateData.website_url = website_url;
+    if (facebook_url !== undefined) updateData.facebook_url = facebook_url;
+    if (twitter_url !== undefined) updateData.twitter_url = twitter_url;
+    if (instagram_url !== undefined) updateData.instagram_url = instagram_url;
+    if (linkedin_url !== undefined) updateData.linkedin_url = linkedin_url;
+    if (category !== undefined) updateData.category = category;
+    if (target_audience !== undefined) updateData.target_audience = target_audience;
+    if (dress_code !== undefined) updateData.dress_code = dress_code;
+    if (special_instructions !== undefined) updateData.special_instructions = special_instructions;
+    
+    // Always update these if they were processed
+    updateData.host_ids = hostIds;
+    updateData.tags = formattedTags;
+
+    // Update the event
+    const updatedEvent = await EventSchema.update(eventId, updateData);
+    
+    // Process uploaded files if any
+    if (req.files) {
+      if (req.files.hostImages && req.files.hostImages.length > 0) {
+        for (const file of req.files.hostImages) {
+          await EventSchema.addHostImage(eventId, file.buffer);
+        }
+      }
+      
+      if (req.files.galleryImages && req.files.galleryImages.length > 0) {
+        for (const file of req.files.galleryImages) {
+          await EventSchema.addGalleryImage(eventId, file.buffer);
+        }
+      }
+      
+      if (req.files.paymentQr && req.files.paymentQr[0]) {
+        await EventSchema.updatePaymentQR(eventId, req.files.paymentQr[0].buffer);
+      }
+    }
+
+    // Get the final updated event
+    const finalEvent = await EventSchema.findById(eventId);
+    
+    // Format response
+    const responseEvent = {
+      ...finalEvent,
+      host_images: finalEvent.host_images ? finalEvent.host_images.length : 0,
+      event_gallery: finalEvent.event_gallery ? finalEvent.event_gallery.length : 0,
+      payment_qr: finalEvent.payment_qr ? 'available' : null
+    };
+
+    res.status(200).json({
+      message: "Event updated successfully",
+      event: responseEvent
+    });
+  } catch (error) {
+    console.error("Error updating event:", error);
+    res.status(500).json({ error: "Server error", details: error.message });
+  }
+});
 
 // Delete event
 router.delete('/deleteEvent/:id', authenticate, async (req, res) => {
@@ -202,19 +416,16 @@ router.delete('/deleteEvent/:id', authenticate, async (req, res) => {
     const eventId = req.params.id;
     const userId = req.user.id;
     
-    // First check if event exists
     const event = await EventSchema.findById(eventId);
     
     if (!event) {
       return res.status(404).json({ error: "Event not found" });
     }
     
-    // Check if the user is one of the hosts of the event
     if (!event.host_ids.includes(userId)) {
       return res.status(403).json({ error: "You don't have permission to delete this event" });
     }
     
-    // Proceed with deletion
     const result = await EventSchema.delete(eventId);
     
     if (!result) {
@@ -231,4 +442,44 @@ router.delete('/deleteEvent/:id', authenticate, async (req, res) => {
   }
 });
 
-module.exports=router
+// Get events by host
+router.get('/getEventsByHost/:hostId', async (req, res) => {
+  try {
+    const hostId = parseInt(req.params.hostId);
+    const events = await EventSchema.findByHostId(hostId);
+    
+    const formattedEvents = events.map(event => ({
+      ...event,
+      host_images: event.host_images ? event.host_images.length : 0,
+      event_gallery: event.event_gallery ? event.event_gallery.length : 0,
+      payment_qr: event.payment_qr ? 'available' : null
+    }));
+
+    res.status(200).json(formattedEvents);
+  } catch (error) {
+    console.error("Error fetching events by host:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Get upcoming events
+router.get('/getUpcomingEvents', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const events = await EventSchema.getUpcomingEvents(limit);
+    
+    const formattedEvents = events.map(event => ({
+      ...event,
+      host_images: event.host_images ? event.host_images.length : 0,
+      event_gallery: event.event_gallery ? event.event_gallery.length : 0,
+      payment_qr: event.payment_qr ? 'available' : null
+    }));
+
+    res.status(200).json(formattedEvents);
+  } catch (error) {
+    console.error("Error fetching upcoming events:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+module.exports = router
