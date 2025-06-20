@@ -2,6 +2,10 @@ const express=require('express');
 const router=express.Router();
 const UserSchema=require('../models/User.js')
 const jwt=require('jsonwebtoken')
+require('dotenv').config()
+const JWT_SECRET=process.env.JWT_SECRET
+
+
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -45,8 +49,8 @@ router.post('/login', async (req, res) => {
                  username: user.username,
                 auth_type: user.auth_type,
             },
-            "abcd"
             
+            JWT_SECRET
         );
     //   res.status(200).json(console.log("User logged in:", userWithoutSensitiveInfo),
         

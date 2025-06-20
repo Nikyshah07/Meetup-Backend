@@ -9,17 +9,6 @@ console.log("Database:", process.env.DATABASE);
 console.log("Port:", process.env.DATABASEPORT);
 // console.log(process.env);
 
-// Connection config
-// const pool = new Pool({
-//   host: process.env.HOST,
-//   user: "postgres",
-//   port: process.env.DATABASEPORT,
-//   password: process.env.PASSWORD,
-//   database: process.env.DATABASE,
-//   ssl: {
-//     rejectUnauthorized: false, // Often needed for remote connections
-//   },
-// });
 
 const pool = new Pool({
   host: process.env.HOST,
