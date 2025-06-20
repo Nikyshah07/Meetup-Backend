@@ -77,9 +77,11 @@ const express = require('express');
 const router = express.Router();
 const UserSchema = require('../models/User.js');
 const { OAuth2Client } = require('google-auth-library');
+const jwt=require("jsonwebtoken")
 require('dotenv').config();
 
 const GOOGLE_CLIENT_ID = process.env.CLIENT_ID;
+const JWT_SECRET=process.env.JWT_SECRET;
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 router.post('/signwithgoogle', async (req, res) => {
     try {
@@ -111,10 +113,19 @@ router.post('/signwithgoogle', async (req, res) => {
                 is_verified: true // Set auth_type to 'google'
             });
         }
-        
+        const token = jwt.sign(
+    {
+        id: user.id,
+        email: user.email,
+        auth_type: user.auth_type
+    },
+    JWT_SECRET
+   
+);
         // Return clean user data
         return res.status(200).json({
             message: "Signed in successfully with Google",
+            token,
             user: {
                 id: user.id,
                 username: user.username,

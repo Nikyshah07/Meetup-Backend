@@ -501,13 +501,14 @@ const upload = multer({
     if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
       return cb(new Error('Only image files are allowed!'), false);
     }
-    cb(null, true);
+    cb(
+      null, true);
   }
 });
 
 // Create new event
 router.post('/createEvent', authenticate, upload.fields([
-  { name: 'eventImages', maxCount: 10 },
+  { name: 'eventImages', maxCount: 4 },
   { name: 'hostPhotos', maxCount: 5 }
 ]), async (req, res) => {
   try {
@@ -673,32 +674,45 @@ router.post('/createEvent', authenticate, upload.fields([
   }
 });
 
-// Get all events with pagination and host details
-router.get('/getEvent', async (req, res) => {
+
+router.get('/getEvent', authenticate, async (req, res) => {
   try {
+    const userId = req.user.id;
+    const username = req.user.username; // ✅ get from token
+    const email = req.user.email;
+
     const limit = parseInt(req.query.limit) || 10;
     const page = parseInt(req.query.page) || 1;
     const offset = (page - 1) * limit;
 
-    const events = await EventSchema.findAllWithHostDetails(limit, offset);
+    const events = await EventSchema.findByHostId(userId);
 
-    // Format events for response
-    const formattedEvents = events.map(event => ({
-      ...event,
-      event_images: event.event_images ? event.event_images.length : 0,
-      host_photos: event.host_photos ? event.host_photos.length : 0
-    }));
+    const paginatedEvents = events
+      .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+      .slice(offset, offset + limit)
+      .map(event => ({
+        ...event,
+        event_images: event.event_images ? event.event_images.length : null,
+        host_photos: event.host_photos ? event.host_photos.length : null,
+        created_by: {
+          id: userId,
+          username, // ✅ include username here
+          email
+        }
+      }));
+      console.log("Decoded user info:", req.user);
 
-    res.status(200).json(formattedEvents);
 
+    res.status(200).json(paginatedEvents);
   } catch (error) {
     console.error("Error fetching events:", error);
     res.status(500).json({ error: "Server error" });
   }
 });
 
+
 // Get single event by ID with host details
-router.get('/getEvent/:id', async (req, res) => {
+router.get('/getEvent/:id', authenticate, async (req, res) => {
   try {
     const eventId = req.params.id;
     const event = await EventSchema.findByIdWithHostDetails(eventId);
@@ -710,8 +724,8 @@ router.get('/getEvent/:id', async (req, res) => {
     // Format event for response
     const formattedEvent = {
       ...event,
-      event_images: event.event_images ? event.event_images.length : 0,
-      host_photos: event.host_photos ? event.host_photos.length : 0
+      event_images: event.event_images ? event.event_images.length : null,
+      host_photos: event.host_photos ? event.host_photos.length : null
     };
 
     res.status(200).json(formattedEvent);
