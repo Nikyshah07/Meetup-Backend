@@ -286,7 +286,7 @@ const paginatedEvents = await Promise.all(events
 
 
 // Get single event by ID with host details
-router.get('/getEvent/:id', authenticate, async (req, res) => {
+router.get('/getEvent/:id', async (req, res) => {
   try {
     const eventId = req.params.id;
     const event = await EventSchema.findByIdWithHostDetails(eventId);

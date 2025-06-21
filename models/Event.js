@@ -39,6 +39,8 @@ const EventSchema = {
     host_linkedin_urls: { type: "VARCHAR(500)[]", default: "'{}'" },
     host_twitter_urls: { type: "VARCHAR(500)[]", default: "'{}'" },
     
+    //banner required
+
     // Event Images
     event_images: { type: "BYTEA[]", default: "'{}'" },
     
