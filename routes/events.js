@@ -2196,7 +2196,10 @@ router.get('/getEvent', async (req, res) => {
                 id: creator._id,
                 username: creator.username,
                 email: creator.email,
+                // photo: creator.photo 
                 photo: creator.photo 
+        ? `data:image/jpeg;base64,${creator.photo.toString('base64')}` 
+        : null
               }
             : null,
         };
