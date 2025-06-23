@@ -3,7 +3,7 @@ const { Pool } = require("pg");
 const bcrypt = require("bcrypt");
 require("dotenv").config(); // Load environment variables
 console.log("Connecting to the database with the following credentials:");
-console.log("User:", process.env.USER);
+console.log("User:", process.env.DB_USER);
 console.log("Host:", process.env.HOST);
 console.log("Database:", process.env.DATABASE);
 console.log("Port:", process.env.DATABASEPORT);
@@ -12,7 +12,7 @@ console.log("Port:", process.env.DATABASEPORT);
 
 const pool = new Pool({
   host: process.env.HOST,
-  user:process.env.USER,
+  user:process.env.DB_USER,
   port: process.env.DATABASEPORT,
   password: process.env.PASSWORD,
   database: process.env.DATABASE,

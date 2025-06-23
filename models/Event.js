@@ -1000,7 +1000,7 @@ require("dotenv").config();
 
 const pool = new Pool({
   host: process.env.HOST,
-  user: process.env.USER,
+  user: process.env.DB_USER,
   port: process.env.DATABASEPORT,
   password: process.env.PASSWORD,
   database: process.env.DATABASE,
@@ -1034,7 +1034,7 @@ const EventSchema = {
     
     // Host Details Arrays for multiple hosts
     host_names: { type: "VARCHAR(255)[]", default: "'{}'" ,notNull:true},
-    host_photos: { type: "BYTEA[]", default: "'{}'" ,notNull:true},
+    host_photos: { type: "BYTEA[]",default: "'{}'" ,notNull:true},
     host_banner: { type: "BYTEA", default: null },
     host_gallery: { type: "BYTEA[]", default: "'{}'" },
     host_instagram_urls: { type: "VARCHAR(500)[]", default: "'{}'" },
@@ -1042,7 +1042,7 @@ const EventSchema = {
     host_twitter_urls: { type: "VARCHAR(500)[]", default: "'{}'" },
 
     // Event Images
-    event_images: { type: "BYTEA[]", default: "'{}'" },
+    event_images: { type: "BYTEA[]", notNull: true },
     
     // Additional Details
     duration: { type: "VARCHAR(50)", default: null },
