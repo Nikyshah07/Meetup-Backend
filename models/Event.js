@@ -1034,7 +1034,7 @@ const EventSchema = {
     
     // Host Details Arrays for multiple hosts
     host_names: { type: "VARCHAR(255)[]", default: "'{}'" ,notNull:true},
-    host_photos: { type: "BYTEA[]",default: "'{}'" ,notNull:true},
+    host_photos: { type: "BYTEA[]",default: "'{}'" ,notNull:true},//remove
     host_banner: { type: "BYTEA", default: null },
     host_gallery: { type: "BYTEA[]", default: "'{}'" },
     host_instagram_urls: { type: "VARCHAR(500)[]", default: "'{}'" },
@@ -1042,7 +1042,7 @@ const EventSchema = {
     host_twitter_urls: { type: "VARCHAR(500)[]", default: "'{}'" },
 
     // Event Images
-    event_images: { type: "BYTEA[]", notNull: true },
+    event_images: { type: "BYTEA[]" ,notNull:'true'},//remove
     
     // Additional Details
     duration: { type: "VARCHAR(50)", default: null },
@@ -1051,7 +1051,8 @@ const EventSchema = {
     layout: { type: "VARCHAR(100)", default: null },
     pet_allowance: { type: "VARCHAR(50)", default: null },
     age_limit: { type: "VARCHAR(50)", default: null },
-    
+    likes: { type: "INTEGER[]", default: "'{}'" },
+
     // Timestamps
     created_at: { type: "TIMESTAMP", default: "CURRENT_TIMESTAMP" },
     updated_at: { type: "TIMESTAMP", default: "CURRENT_TIMESTAMP" },

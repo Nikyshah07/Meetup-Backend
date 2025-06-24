@@ -63,7 +63,7 @@ const upload = multer({
 });
 
 // Profile update route with photo upload
-router.post('/profile', authenticate, upload.single('photo'), async (req, res) => {
+router.post('/profile', upload.single('photo'), async (req, res) => {
   try {
     const email = req.user.email;
     const { username, gender, city } = req.body;
@@ -98,7 +98,7 @@ router.post('/profile', authenticate, upload.single('photo'), async (req, res) =
     const updatedUser = await UserSchema.updateProfileByEmail(email, updateData);
 
     res.status(200).json({
-      message: "Profile updated successfully",
+      message: "Profile Added successfully",
       user: updatedUser
     });
 
