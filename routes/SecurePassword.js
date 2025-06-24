@@ -5,6 +5,7 @@ const UserSchema = require("../models/User.js");
 const otpStore = require("./otpStore.js");
 const jwt=require('jsonwebtoken');
 require('dotenv').config()
+const JWT_SECRET=process.env.JWT_SECRET
 router.post("/secure-password", async (req, res) => {
   console.log("Current OTP store:", otpStore);
 
