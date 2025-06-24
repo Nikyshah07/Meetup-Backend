@@ -62,15 +62,15 @@ router.post(
         pet_allowance,
         age_limit,
       } = req.body;
-      
+
       const isVirtualEvent = is_virtual === "true" || is_virtual === true;
-      
+
       // if (!req.files || !req.files.eventImages || req.files.eventImages.length === 0) {
       //   return res.status(400).json({
       //     errors: ["At least one event image is required."],
       //   });
       // }
-      
+
       // Basic validation (keeping your existing validation logic)
       if (!event_name) {
         return res.status(400).json({ errors: ["Event name is required."] });
@@ -96,7 +96,10 @@ router.post(
         return res.status(400).json({ errors: ["Event tags is required."] });
       }
 
-      if ((is_free === "false" || is_free === false) && (!ticket_price || parseFloat(ticket_price) <= 0)) {
+      if (
+        (is_free === "false" || is_free === false) &&
+        (!ticket_price || parseFloat(ticket_price) <= 0)
+      ) {
         return res.status(400).json({
           errors: ["Ticket price is required for paid events."],
         });
@@ -211,13 +214,15 @@ router.post(
         // Process event images
         if (req.files.eventImages && req.files.eventImages.length > 0) {
           console.log("Processing event images:", req.files.eventImages.length);
-          processedEventImages = req.files.eventImages.map(file => file.buffer);
+          processedEventImages = req.files.eventImages.map(
+            (file) => file.buffer
+          );
         }
 
         // Process host photos
         if (req.files.hostPhotos && req.files.hostPhotos.length > 0) {
           console.log("Processing host photos:", req.files.hostPhotos.length);
-          processedHostPhotos = req.files.hostPhotos.map(file => file.buffer);
+          processedHostPhotos = req.files.hostPhotos.map((file) => file.buffer);
         }
 
         // Process host banner (single image)
@@ -229,7 +234,9 @@ router.post(
         // Process host gallery (multiple images)
         if (req.files.hostGallery && req.files.hostGallery.length > 0) {
           console.log("Processing host gallery:", req.files.hostGallery.length);
-          processedHostGallery = req.files.hostGallery.map(file => file.buffer);
+          processedHostGallery = req.files.hostGallery.map(
+            (file) => file.buffer
+          );
         }
       }
 
@@ -341,21 +348,22 @@ router.post("/likeEvent/:eventId", authenticate, async (req, res) => {
     // Check if user already liked the event
     const likes = event.likes || [];
     if (likes.includes(userId)) {
-      return res.status(400).json({ error: "You have already liked this event" });
+      return res
+        .status(400)
+        .json({ error: "You have already liked this event" });
     }
 
     // Add user ID to likes array
     const newLikes = [...likes, userId]; // ✅ new array
-const updatedEvent = await EventSchema.update(eventId, {
-  likes: newLikes,
-  total_likes: newLikes.length // ✅ added this line
-});
-
+    const updatedEvent = await EventSchema.update(eventId, {
+      likes: newLikes,
+      total_likes: newLikes.length, // ✅ added this line
+    });
 
     res.status(200).json({
       message: "Event liked successfully",
-      total_likes:updatedEvent.total_likes,
-      is_liked: true
+      total_likes: updatedEvent.total_likes,
+      is_liked: true,
     });
   } catch (error) {
     console.error("Error liking event:", error);
@@ -378,7 +386,9 @@ router.post("/unlikeEvent/:eventId", authenticate, async (req, res) => {
     // Check if user has liked the event
     const likes = event.likes || [];
     if (!likes.includes(userId)) {
-      return res.status(400).json({ error: "You haven't liked this event yet" });
+      return res
+        .status(400)
+        .json({ error: "You haven't liked this event yet" });
     }
 
     // Remove user ID from likes array
@@ -386,16 +396,16 @@ router.post("/unlikeEvent/:eventId", authenticate, async (req, res) => {
     // const updatedEvent = await EventSchema.update(eventId, {
     //   likes: updatedLikes
     // });
-const updatedLikes = likes.filter(id => id !== userId);
-const updatedEvent = await EventSchema.update(eventId, {
-  likes: updatedLikes,
-  total_likes: updatedLikes.length
-});
+    const updatedLikes = likes.filter((id) => id !== userId);
+    const updatedEvent = await EventSchema.update(eventId, {
+      likes: updatedLikes,
+      total_likes: updatedLikes.length,
+    });
 
     res.status(200).json({
       message: "Event unliked successfully",
-      total_likes:updatedEvent.total_likes,
-      is_liked: false
+      total_likes: updatedEvent.total_likes,
+      is_liked: false,
     });
   } catch (error) {
     console.error("Error unliking event:", error);
@@ -415,7 +425,7 @@ router.get("/getLikes/:eventId", async (req, res) => {
     }
 
     const likes = event.likes || [];
-    
+
     // Get user details for each like
     const likeDetails = await Promise.all(
       likes.map(async (userId) => {
@@ -426,9 +436,9 @@ router.get("/getLikes/:eventId", async (req, res) => {
               id: user.id || user._id,
               username: user.username,
               email: user.email,
-              photo: user.photo 
+              photo: user.photo
                 ? `data:image/jpeg;base64,${user.photo.toString("base64")}`
-                : null
+                : null,
             };
           }
           return null;
@@ -440,13 +450,13 @@ router.get("/getLikes/:eventId", async (req, res) => {
     );
 
     // Filter out null values (users that couldn't be found)
-    const validLikes = likeDetails.filter(like => like !== null);
+    const validLikes = likeDetails.filter((like) => like !== null);
 
     res.status(200).json({
       event_id: eventId,
       total_likes: event.total_likes,
 
-      likes: validLikes
+      likes: validLikes,
     });
   } catch (error) {
     console.error("Error getting event likes:", error);
@@ -454,111 +464,109 @@ router.get("/getLikes/:eventId", async (req, res) => {
   }
 });
 
-  router.get("/getEvent", async (req, res) => {
-    try {
-      const limit = parseInt(req.query.limit) || 10;
-      const page = parseInt(req.query.page) || 1;
-      const offset = (page - 1) * limit;
+router.get("/getEvent", async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.query.page) || 1;
+    const offset = (page - 1) * limit;
 
-      const events = await EventSchema.findAll();
+    const events = await EventSchema.findAll();
 
-      const paginatedEvents = await Promise.all(
-        events
-          .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
-          .slice(offset, offset + limit)
-          .map(async (event) => {
-            const creatorId = event.host_ids?.[0]; // primary host
-            let creator = null;
+    const paginatedEvents = await Promise.all(
+      events
+        .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+        .slice(offset, offset + limit)
+        .map(async (event) => {
+          const creatorId = event.host_ids?.[0]; // primary host
+          let creator = null;
 
-            if (creatorId) {
-              const userResult = await User.findById(creatorId);
-              if (userResult) {
-                creator = {
-                  _id: userResult._id || userResult.id,
-                  username: userResult.username,
-                  email: userResult.email,
-                  photo: userResult.photo,
-                };
-              }
+          if (creatorId) {
+            const userResult = await User.findById(creatorId);
+            if (userResult) {
+              creator = {
+                _id: userResult._id || userResult.id,
+                username: userResult.username,
+                email: userResult.email,
+                photo: userResult.photo,
+              };
             }
+          }
 
-            const {
-              host_photos,
-              host_instagram_urls,
-              host_linkedin_urls,
-              host_twitter_urls,
-              host_names,
-              ...eventData
-            } = event;
+          const {
+            host_photos,
+            host_instagram_urls,
+            host_linkedin_urls,
+            host_twitter_urls,
+            host_names,
+            ...eventData
+          } = event;
 
-            // Since no authentication, set like status to false by default
-            const likes = event.likes || [];
+          // Since no authentication, set like status to false by default
+          const likes = event.likes || [];
 
-            return {
-              ...eventData,
-              event_images:
-                event.event_images && event.event_images.length > 0
-                  ? event.event_images.map((img, index) => ({
+          return {
+            ...eventData,
+            event_images:
+              event.event_images && event.event_images.length > 0
+                ? event.event_images.map((img, index) => ({
+                    id: index,
+                    url: `data:image/jpeg;base64,${img.toString("base64")}`,
+                  }))
+                : [],
+
+            host_social: {
+              photos:
+                event.host_photos && event.host_photos.length > 0
+                  ? event.host_photos.map((img, index) => ({
                       id: index,
                       url: `data:image/jpeg;base64,${img.toString("base64")}`,
                     }))
                   : [],
 
-              host_social: {
-                photos:
-                  event.host_photos && event.host_photos.length > 0
-                    ? event.host_photos.map((img, index) => ({
-                        id: index,
-                        url: `data:image/jpeg;base64,${img.toString("base64")}`,
-                      }))
-                    : [],
+              instagram_urls: event.host_instagram_urls || [],
+              linkedin_urls: event.host_linkedin_urls || [],
+              twitter_urls: event.host_twitter_urls || [],
+              host_names: event.host_names || [],
+            },
 
-                instagram_urls: event.host_instagram_urls || [],
-                linkedin_urls: event.host_linkedin_urls || [],
-                twitter_urls: event.host_twitter_urls || [],
-                host_names: event.host_names || [],
-              },
+            host_banner: event.host_banner
+              ? {
+                  url: `data:image/jpeg;base64,${event.host_banner.toString(
+                    "base64"
+                  )}`,
+                }
+              : null,
 
-              host_banner: event.host_banner
-                ? {
-                    url: `data:image/jpeg;base64,${event.host_banner.toString(
-                      "base64"
-                    )}`,
-                  }
-                : null,
+            host_gallery:
+              event.host_gallery && event.host_gallery.length > 0
+                ? event.host_gallery.map((img, index) => ({
+                    id: index,
+                    url: `data:image/jpeg;base64,${img.toString("base64")}`,
+                  }))
+                : [],
 
-              host_gallery:
-                event.host_gallery && event.host_gallery.length > 0
-                  ? event.host_gallery.map((img, index) => ({
-                      id: index,
-                      url: `data:image/jpeg;base64,${img.toString("base64")}`,
-                    }))
-                  : [],
+            created_by: creator
+              ? {
+                  id: creator._id,
+                  username: creator.username,
+                  email: creator.email,
+                  // photo: creator.photo
+                  photo: creator.photo || null,
+                }
+              : null,
+            total_likes: event.total_likes,
 
-              created_by: creator
-                ? {
-                    id: creator._id,
-                    username: creator.username,
-                    email: creator.email,
-                    // photo: creator.photo
-                   photo: creator.photo || null,
+            is_liked: false,
+          };
+        })
+    );
 
-                  }
-                : null,
-
-              // Add like information - no user authentication so is_liked is always false
-              total_likes: likes.length,
-              is_liked: false,
-            };
-          })
-      );
-
-      res.status(200).json(paginatedEvents);
-    } catch (error) {
-      console.error("Error fetching events:", error);
-      res.status(500).json({ error: "Server error" });
-    }
-  });
+    res.status(200).json(paginatedEvents);
+  } catch (error) {
+    console.error("Error fetching events:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 // Get single event by ID with host details
 router.get("/getEvent/:id", async (req, res) => {
@@ -1000,6 +1008,5 @@ router.get("/getUpcomingEvents", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-
 
 module.exports = router;
