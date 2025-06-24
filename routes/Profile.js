@@ -47,7 +47,7 @@ const router = express.Router();
 const UserSchema = require('../models/User.js');
 const authenticate = require('../middlewares/authenticate.js');
 const multer = require('multer');
-
+const JWT_SECRET=process.env.JWT_SECRET
 // Configure multer for memory storage
 const storage = multer.memoryStorage();
 const upload = multer({ 
@@ -63,10 +63,9 @@ const upload = multer({
 });
 
 // Profile update route with photo upload
-router.post('/profile', authenticate, upload.single('photo'), async (req, res) => {
+router.post('/profile', upload.single('photo'), async (req, res) => {
   try {
-    const email = req.user.email;
-    const { username, gender, city } = req.body;
+    const {email,username, gender, city } = req.body;
 
     if (!email) {
       return res.status(400).json({ error: "Email is missing in token" });

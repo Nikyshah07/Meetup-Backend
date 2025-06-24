@@ -1042,7 +1042,7 @@ const EventSchema = {
     host_twitter_urls: { type: "VARCHAR(500)[]", default: "'{}'" },
 
     // Event Images
-    event_images: { type: "BYTEA[]", notNull: true },
+    event_images: { type: "BYTEA[]", default: "'{}'" },
     
     // Additional Details
     duration: { type: "VARCHAR(50)", default: null },

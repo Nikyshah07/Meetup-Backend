@@ -34,8 +34,8 @@ router.post(
   upload.fields([
     { name: "eventImages", maxCount: 4 },
     { name: "hostPhotos", maxCount: 5 },
-    { name: "hostBanner", maxCount: 1 }, // Single banner image
-    { name: "hostGallery", maxCount: 10 }, // Multiple gallery images
+    { name: "hostBanner", maxCount: 1 },
+    { name: "hostGallery", maxCount: 10 },
   ]),
   async (req, res) => {
     try {
@@ -46,22 +46,15 @@ router.post(
         description,
         event_date,
         event_time,
-
-        // Simple location string or URL based on is_virtual
         location,
-
         event_tags,
         is_virtual,
         is_free,
         ticket_price,
-
-        // Host Details Arrays
         host_names,
         host_instagram_urls,
         host_linkedin_urls,
         host_twitter_urls,
-
-        // Additional Details
         duration,
         seating,
         layout,
@@ -69,8 +62,8 @@ router.post(
         pet_allowance,
         age_limit,
       } = req.body;
+      
       const isVirtualEvent = is_virtual === "true" || is_virtual === true;
-      // const isFreeEvent = is_free === "true" || is_free === true;
       
       if (!req.files || !req.files.eventImages || req.files.eventImages.length === 0) {
         return res.status(400).json({
@@ -78,7 +71,7 @@ router.post(
         });
       }
       
-      // Basic validation
+      // Basic validation (keeping your existing validation logic)
       if (!event_name) {
         return res.status(400).json({ errors: ["Event name is required."] });
       }
@@ -93,15 +86,16 @@ router.post(
 
       if (!location || location.trim() === "") {
         return res.status(400).json({
-          // error: isVirtualEvent ? "Virtual events require a valid HTTPS URL" : "Offline events require a location"
           errors: isVirtualEvent
             ? "Event URL is required for online events."
             : "Physical location is required for offline events.",
         });
       }
+
       if (!event_tags) {
         return res.status(400).json({ errors: ["Event tags is required."] });
       }
+
       if ((is_free === "false" || is_free === false) && (!ticket_price || parseFloat(ticket_price) <= 0)) {
         return res.status(400).json({
           errors: ["Ticket price is required for paid events."],
@@ -112,34 +106,20 @@ router.post(
         return res.status(400).json({ errors: ["Description is required."] });
       }
 
-      // if (
-      //   !req.files ||
-      //   !req.files.hostPhotos ||
-      //   req.files.hostPhotos.length === 0
-      // ) {
-      //   return res
-      //     .status(400)
-      //     .json({ errors: ["At least one host photo is required."] });
-      // }
       if (!host_names || !host_names.length) {
         return res
           .status(400)
           .json({ errors: ["At least one host name is required."] });
       }
 
-   
-      // Process location based on is_virtual flag
-
       // Validate location based on event type
       if (isVirtualEvent) {
-        // For virtual events, location should be a valid HTTPS URL
         if (!isValidHttpsUrl(location)) {
           return res.status(400).json({
             error: "Please enter a valid HTTPS URL for virtual events",
           });
         }
       } else {
-        // For offline events, just ensure location is not empty (any string is valid)
         if (location.trim().length < 3) {
           return res.status(400).json({
             error: "Please enter a valid location for offline events",
@@ -219,14 +199,48 @@ router.post(
           : [host_twitter_urls];
       }
 
-      // Create event object
+      // Process uploaded images BEFORE creating the event
+      let processedEventImages = [];
+      let processedHostPhotos = [];
+      let processedHostBanner = null;
+      let processedHostGallery = [];
+
+      if (req.files) {
+        console.log("Files received:", Object.keys(req.files));
+
+        // Process event images
+        if (req.files.eventImages && req.files.eventImages.length > 0) {
+          console.log("Processing event images:", req.files.eventImages.length);
+          processedEventImages = req.files.eventImages.map(file => file.buffer);
+        }
+
+        // Process host photos
+        if (req.files.hostPhotos && req.files.hostPhotos.length > 0) {
+          console.log("Processing host photos:", req.files.hostPhotos.length);
+          processedHostPhotos = req.files.hostPhotos.map(file => file.buffer);
+        }
+
+        // Process host banner (single image)
+        if (req.files.hostBanner && req.files.hostBanner.length > 0) {
+          console.log("Processing host banner");
+          processedHostBanner = req.files.hostBanner[0].buffer;
+        }
+
+        // Process host gallery (multiple images)
+        if (req.files.hostGallery && req.files.hostGallery.length > 0) {
+          console.log("Processing host gallery:", req.files.hostGallery.length);
+          processedHostGallery = req.files.hostGallery.map(file => file.buffer);
+        }
+      }
+
+      // Create event object with processed images
       const eventData = {
         event_name,
         host_ids: hostIds,
         description,
         event_date,
         event_time,
-        location: location.trim(), // Simple string field
+        location: location.trim(),
         event_tags: formattedTags,
         is_virtual: isVirtualEvent,
         is_free: is_free === "true" || is_free === true,
@@ -237,9 +251,15 @@ router.post(
 
         // Host Details
         host_names: formattedHostNames,
+        host_photos: processedHostPhotos, // Include processed images
+        host_banner: processedHostBanner, // Include processed banner
+        host_gallery: processedHostGallery, // Include processed gallery
         host_instagram_urls: formattedInstagramUrls,
         host_linkedin_urls: formattedLinkedinUrls,
         host_twitter_urls: formattedTwitterUrls,
+
+        // Event Images - CRITICAL: Include this to avoid NOT NULL constraint violation
+        event_images: processedEventImages,
 
         // Additional Details
         duration: duration || null,
@@ -250,48 +270,8 @@ router.post(
         age_limit: age_limit || null,
       };
 
-      // Create the event
+      // Create the event with all data including images
       const event = await EventSchema.create(eventData);
-
-      // Process uploaded files
-      if (req.files) {
-        console.log("Files received:", Object.keys(req.files)); // Debug log
-
-        // Process event images
-        if (req.files.eventImages && req.files.eventImages.length > 0) {
-          console.log("Processing event images:", req.files.eventImages.length); // Debug log
-          for (const file of req.files.eventImages) {
-            await EventSchema.addEventImage(event.id, file.buffer);
-          }
-        }
-
-        // Process host photos
-        if (req.files.hostPhotos && req.files.hostPhotos.length > 0) {
-          console.log("Processing host photos:", req.files.hostPhotos.length); // Debug log
-          for (const file of req.files.hostPhotos) {
-            await EventSchema.addHostPhoto(event.id, file.buffer);
-          }
-        }
-
-        // Process host banner (single image)
-        if (req.files.hostBanner && req.files.hostBanner.length > 0) {
-          console.log("Processing host banner"); // Debug log
-          await EventSchema.setHostBanner(
-            event.id,
-            req.files.hostBanner[0].buffer
-          );
-        }
-
-        // Process host gallery (multiple images)
-        if (req.files.hostGallery && req.files.hostGallery.length > 0) {
-          console.log("Processing host gallery:", req.files.hostGallery.length); // Debug log
-          for (const file of req.files.hostGallery) {
-            await EventSchema.addHostGalleryImage(event.id, file.buffer);
-          }
-        }
-      } else {
-        console.log("No files received in request"); // Debug log
-      }
 
       // Get the created event with host details
       const createdEvent = await EventSchema.findByIdWithHostDetails(event.id);
