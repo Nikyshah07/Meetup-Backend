@@ -65,11 +65,11 @@ router.post(
       
       const isVirtualEvent = is_virtual === "true" || is_virtual === true;
       
-      if (!req.files || !req.files.eventImages || req.files.eventImages.length === 0) {
-        return res.status(400).json({
-          errors: ["At least one event image is required."],
-        });
-      }
+      // if (!req.files || !req.files.eventImages || req.files.eventImages.length === 0) {
+      //   return res.status(400).json({
+      //     errors: ["At least one event image is required."],
+      //   });
+      // }
       
       // Basic validation (keeping your existing validation logic)
       if (!event_name) {
@@ -345,13 +345,16 @@ router.post("/likeEvent/:eventId", authenticate, async (req, res) => {
     }
 
     // Add user ID to likes array
-    const updatedEvent = await EventSchema.update(eventId, {
-      likes: [...likes, userId]
-    });
+    const newLikes = [...likes, userId]; // ✅ new array
+const updatedEvent = await EventSchema.update(eventId, {
+  likes: newLikes,
+  total_likes: newLikes.length // ✅ added this line
+});
+
 
     res.status(200).json({
       message: "Event liked successfully",
-      total_likes: (updatedEvent.likes || []).length,
+      total_likes:updatedEvent.total_likes,
       is_liked: true
     });
   } catch (error) {
@@ -379,14 +382,19 @@ router.post("/unlikeEvent/:eventId", authenticate, async (req, res) => {
     }
 
     // Remove user ID from likes array
-    const updatedLikes = likes.filter(id => id !== userId);
-    const updatedEvent = await EventSchema.update(eventId, {
-      likes: updatedLikes
-    });
+    // const updatedLikes = likes.filter(id => id !== userId);
+    // const updatedEvent = await EventSchema.update(eventId, {
+    //   likes: updatedLikes
+    // });
+const updatedLikes = likes.filter(id => id !== userId);
+const updatedEvent = await EventSchema.update(eventId, {
+  likes: updatedLikes,
+  total_likes: updatedLikes.length
+});
 
     res.status(200).json({
       message: "Event unliked successfully",
-      total_likes: (updatedEvent.likes || []).length,
+      total_likes:updatedEvent.total_likes,
       is_liked: false
     });
   } catch (error) {
@@ -436,7 +444,8 @@ router.get("/getLikes/:eventId", async (req, res) => {
 
     res.status(200).json({
       event_id: eventId,
-      total_likes: likes.length,
+      total_likes: event.total_likes,
+
       likes: validLikes
     });
   } catch (error) {
@@ -597,7 +606,8 @@ router.get("/getEvent/:id", async (req, res) => {
         : [],
 
       // Add like information - no user authentication so is_liked is always false
-      total_likes: likes.length,
+      total_likes: event.total_likes,
+
       is_liked: false,
     };
 
