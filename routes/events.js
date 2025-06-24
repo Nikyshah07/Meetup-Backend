@@ -464,11 +464,26 @@ router.get("/getLikes/:eventId", async (req, res) => {
   }
 });
 
+// Fixed getEvent endpoint - add optional authentication
 router.get("/getEvent", async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
     const page = parseInt(req.query.page) || 1;
     const offset = (page - 1) * limit;
+
+    // Get current user ID from token (optional)
+    let currentUserId = null;
+    try {
+      const token = req.headers.authorization?.replace('Bearer ', '');
+      if (token) {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        currentUserId = decoded.id;
+      }
+    } catch (err) {
+      // No valid token, continue as guest
+      console.log('No valid auth token provided');
+    }
 
     const events = await EventSchema.findAll();
 
@@ -501,8 +516,9 @@ router.get("/getEvent", async (req, res) => {
             ...eventData
           } = event;
 
-          // Since no authentication, set like status to false by default
+          // Check if current user has liked this event
           const likes = event.likes || [];
+          const isLiked = currentUserId ? likes.includes(currentUserId) : false;
 
           return {
             ...eventData,
@@ -550,13 +566,12 @@ router.get("/getEvent", async (req, res) => {
                   id: creator._id,
                   username: creator.username,
                   email: creator.email,
-                  // photo: creator.photo
                   photo: creator.photo || null,
                 }
               : null,
-            total_likes: event.total_likes,
-
-            is_liked: false,
+            
+            total_likes: event.total_likes || likes.length,
+            is_liked: isLiked, // ✅ Now correctly checking if user liked the event
           };
         })
     );
