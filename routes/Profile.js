@@ -97,7 +97,7 @@ router.post('/profile', upload.single('photo'), async (req, res) => {
     const updatedUser = await UserSchema.updateProfileByEmail(email, updateData);
 
     res.status(200).json({
-      message: "Profile updated successfully",
+      message: "Profile Added successfully",
       user: updatedUser
     });
 

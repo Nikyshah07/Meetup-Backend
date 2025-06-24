@@ -12,19 +12,19 @@ router.post('/login', async (req, res) => {
         
         // Validate input
         if (!email || !password) {
-            return res.status(400).json({ error: "Email and password are required" });
+            return res.status(400).json({ error: "Please enter both email and password." });
         }
         
         // Find user by email
         const user = await UserSchema.findByEmail(email);
         if (!user) {
             console.log("User not found:", email);
-            return res.status(401).json({ error: "No account found with this email" });
+            return res.status(401).json({ error: "User not found" });
         }
         
         // Check if this user was created with Google OAuth
         if (user.auth_type === "GOOGLE") {
-            return res.status(401).json({ error: "Log in with Google, this account is Google-linked", "auth_type": user.auth_type });
+            return res.status(401).json({ error: "This account was registered using Google. Please sign in with Google.", "auth_type": user.auth_type });
           }
         
         // Compare password for regular accounts
@@ -37,7 +37,7 @@ router.post('/login', async (req, res) => {
             }
         } catch (error) {
             console.error("Password validation error:", error);
-            return res.status(500).json({ error: "Error validating credentials" });
+            return res.status(500).json({ error: "Something went wrong while checking your password. Please try again later." });
         }
         
         // Don't send the password and photo in response
