@@ -1052,6 +1052,7 @@ const EventSchema = {
     pet_allowance: { type: "VARCHAR(50)", default: null },
     age_limit: { type: "VARCHAR(50)", default: null },
     likes: { type: "INTEGER[]", default: "'{}'" },
+    total_likes: { type: "INTEGER", default: 0 },
 
     // Timestamps
     created_at: { type: "TIMESTAMP", default: "CURRENT_TIMESTAMP" },
