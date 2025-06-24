@@ -3,7 +3,8 @@ const router = express.Router();
 const bcrypt = require("bcrypt");
 const UserSchema = require("../models/User.js");
 const otpStore = require("./otpStore.js");
-
+const jwt=require('jsonwebtoken');
+require('dotenv').config()
 router.post("/secure-password", async (req, res) => {
   console.log("Current OTP store:", otpStore);
 
@@ -53,13 +54,23 @@ router.post("/secure-password", async (req, res) => {
     ); 
 
     delete otpStore[email];
-
+   const token = jwt.sign(
+            {
+                id: user.id,
+                email: user.email,
+                 username: user.username,
+                auth_type: user.auth_type,
+            },
+            
+            JWT_SECRET
+        );
     res.status(200).json({
       success: true,
       message: "Password set successfully",
       status: {
         is_verified: true,
       },
+      token
     });
   } catch (error) {
     console.error(error);

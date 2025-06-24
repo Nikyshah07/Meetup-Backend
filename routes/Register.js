@@ -90,9 +90,9 @@ const router = express.Router();
 const otpStore=require('./otpStore')
 const UserSchema=require('../models/User')
 const nodemailer=require('nodemailer');
-const jwt=require('jsonwebtoken');
+
 require('dotenv').config()
-require('dotenv').config();
+
 
 router.post('/register', async (req, res) => {
     const { email } = req.body;
@@ -157,23 +157,14 @@ try {
     otp,
     is_verified: false,
   });
- const token = jwt.sign(
-            {
-                id: user.id,
-                email: user.email,
-                 username: user.username,
-                auth_type: user.auth_type,
-            },
-            
-            JWT_SECRET
-        );
+ 
   res.status(200).json({
     success: true,
     message: 'OTP sent successfully',
     status: {
       is_verified: false,
     },
-    token
+    
   });
 
 } catch (error) {

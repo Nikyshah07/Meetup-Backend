@@ -5,7 +5,7 @@ function authenticate(req, res, next) {
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ errors: "Token not provided" });
+    return res.status(401).json({ error: "Token not provided" });
   }
 
   try {

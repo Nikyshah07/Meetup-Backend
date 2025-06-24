@@ -67,33 +67,33 @@ router.post(
 
       // if (!req.files || !req.files.eventImages || req.files.eventImages.length === 0) {
       //   return res.status(400).json({
-      //     errors: ["At least one event image is required."],
+      //     error: ["At least one event image is required."],
       //   });
       // }
 
       // Basic validation (keeping your existing validation logic)
       if (!event_name) {
-        return res.status(400).json({ errors: ["Event name is required."] });
+        return res.status(400).json({ error: ["Event name is required."] });
       }
 
       if (!event_date) {
-        return res.status(400).json({ errors: ["Event date is required."] });
+        return res.status(400).json({ error: ["Event date is required."] });
       }
 
       if (!event_time) {
-        return res.status(400).json({ errors: ["Event time is required."] });
+        return res.status(400).json({ error: ["Event time is required."] });
       }
 
       if (!location || location.trim() === "") {
         return res.status(400).json({
-          errors: isVirtualEvent
+          error: isVirtualEvent
             ? "Event URL is required for online events."
             : "Physical location is required for offline events.",
         });
       }
 
       if (!event_tags) {
-        return res.status(400).json({ errors: ["Event tags is required."] });
+        return res.status(400).json({ error: ["Event tags is required."] });
       }
 
       if (
@@ -101,18 +101,18 @@ router.post(
         (!ticket_price || parseFloat(ticket_price) <= 0)
       ) {
         return res.status(400).json({
-          errors: ["Ticket price is required for paid events."],
+          error: ["Ticket price is required for paid events."],
         });
       }
 
       if (!description.trim()) {
-        return res.status(400).json({ errors: ["Description is required."] });
+        return res.status(400).json({ error: ["Description is required."] });
       }
 
       if (!host_names || !host_names.length) {
         return res
           .status(400)
-          .json({ errors: ["At least one host name is required."] });
+          .json({ error: ["At least one host name is required."] });
       }
 
       // Validate location based on event type

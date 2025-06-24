@@ -41,7 +41,12 @@ router.post('/login', async (req, res) => {
         }
         
         // Don't send the password and photo in response
-        const { password: _, photo: __, ...userWithoutSensitiveInfo } = user;
+        // const { password: _, photo: __, ...userWithoutSensitiveInfo } = user;
+
+        const { password: _, ...userWithoutSensitiveInfo } = user;
+
+// If photo exists, send it. If not, send null
+userWithoutSensitiveInfo.photo = user.photo || null;
         const token = jwt.sign(
             {
                 id: user.id,
