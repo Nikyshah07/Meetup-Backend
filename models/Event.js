@@ -17,7 +17,7 @@ const pool = new Pool({
     require: true,
     rejectUnauthorized: false,
   },
-  
+    family: 4,
 });
 
 const EventSchema = {
