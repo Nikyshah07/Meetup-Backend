@@ -1,10 +1,10 @@
-const express=require('express');
-const router=express.Router();
-const UserSchema=require('../models/User.js')
-const jwt=require('jsonwebtoken');
-const supabase=require('./supabase.js')
-require('dotenv').config()
-const JWT_SECRET=process.env.JWT_SECRET
+// const express=require('express');
+// const router=express.Router();
+// const UserSchema=require('../models/User.js')
+// const jwt=require('jsonwebtoken');
+// const supabase=require('./supabase.js')
+// require('dotenv').config()
+// const JWT_SECRET=process.env.JWT_SECRET
 
 
 // router.post('/login', async (req, res) => {
@@ -74,6 +74,80 @@ const JWT_SECRET=process.env.JWT_SECRET
 // module.exports=router
 
 
+// router.post('/login', async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
+
+//     if (!email || !password) {
+//       return res.status(400).json({ error: "Please enter both email and password." });
+//     }
+
+//     // Fetch user by email from Supabase
+//     const { data: userArray, error } = await supabase
+//       .from('users')
+//       .select('*')
+//       .eq('email', email);
+
+//     if (error || !userArray || userArray.length === 0) {
+//       return res.status(401).json({ error: "User not found" });
+//     }
+
+//     const user = userArray[0];
+
+//     // Google account check
+//     if (user.auth_type === "GOOGLE") {
+//       return res.status(401).json({ error: "This account was registered using Google. Please sign in with Google.", auth_type: user.auth_type });
+//     }
+
+//     // Validate password (compare plain text or hashed, depending on your setup)
+//     const isPasswordValid = await UserSchema.validatePassword(password, user.password);
+//     if (!isPasswordValid) {
+//       return res.status(401).json({ error: "Invalid password" });
+//     }
+
+//     // Create JWT token
+//     const token = jwt.sign(
+//       {
+//         id: user.id,
+//         email: user.email,
+//         username: user.username,
+//         auth_type: user.auth_type,
+//       },
+//       JWT_SECRET
+//     );
+
+//     // Build response user object
+//     const userWithoutPassword = {
+//       id: user.id,
+//       email: user.email,
+//       username: user.username,
+//       gender: user.gender,
+//       city: user.city,
+//       photo: user.photo || null, // Send photo URL if exists
+//       auth_type: user.auth_type
+//     };
+
+//     return res.status(200).json({
+//       message: "Login successful",
+//       user: userWithoutPassword,
+//       token
+//     });
+
+//   } catch (error) {
+//     console.error("Login error:", error);
+//     return res.status(500).json({ error: "Server error" });
+//   }
+// });
+// module.exports=router
+
+
+const express = require('express');
+require('dotenv').config()
+const jwt = require('jsonwebtoken');
+const router = express.Router();
+const UserSchema = require('../models/User'); // Make sure it's the correct path
+const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret"; // Add this in your .env
+
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -82,30 +156,28 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: "Please enter both email and password." });
     }
 
-    // Fetch user by email from Supabase
-    const { data: userArray, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email);
+    // ✅ Fetch user from Neon PostgreSQL using UserSchema
+    const user = await UserSchema.findByEmail(email);
 
-    if (error || !userArray || userArray.length === 0) {
+    if (!user) {
       return res.status(401).json({ error: "User not found" });
     }
 
-    const user = userArray[0];
-
-    // Google account check
+    // ✅ Google account check
     if (user.auth_type === "GOOGLE") {
-      return res.status(401).json({ error: "This account was registered using Google. Please sign in with Google.", auth_type: user.auth_type });
+      return res.status(401).json({
+        error: "This account was registered using Google. Please sign in with Google.",
+        auth_type: user.auth_type
+      });
     }
 
-    // Validate password (compare plain text or hashed, depending on your setup)
+    // ✅ Validate password
     const isPasswordValid = await UserSchema.validatePassword(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ error: "Invalid password" });
     }
 
-    // Create JWT token
+    // ✅ Generate JWT token
     const token = jwt.sign(
       {
         id: user.id,
@@ -116,14 +188,14 @@ router.post('/login', async (req, res) => {
       JWT_SECRET
     );
 
-    // Build response user object
+    // ✅ Remove password from response
     const userWithoutPassword = {
       id: user.id,
       email: user.email,
       username: user.username,
       gender: user.gender,
       city: user.city,
-      photo: user.photo || null, // Send photo URL if exists
+      photo: user.photo || null,
       auth_type: user.auth_type
     };
 
@@ -138,6 +210,7 @@ router.post('/login', async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 });
-module.exports=router
+
+module.exports = router;
 
 

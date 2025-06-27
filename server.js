@@ -13,21 +13,23 @@ const verifyOtp=require('./routes/VerifyOtp.js')
 const resetPassword=require('./routes/ResetPassword.js')
 
 const securePassword=require('./routes/SecurePassword.js')
-// const event=require('./routes/events.js')
+const event=require('./routes/events.js')
 
 
 
 const cors=require('cors');
 app.use(cors())
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Middleware
 
 // ADD THIS
-app.use(express.json());
+// app.use(express.json());
 // Initialize database
 async function initializeDatabase() {
     try {
         await UserSchema.createTable();
-        // await EventSchema.createTable();
+        await EventSchema.createTable();
         console.log('Database initialized successfully');
     } catch (error) {
         console.error('Database initialization failed:', error);
@@ -47,7 +49,7 @@ app.use('/',forgotPassword)
 app.use('/',verifyOtp)
 app.use('/',resetPassword)
 app.use('/',securePassword)
-// app.use('/',event)
+app.use('/',event)
 
 
 app.get('/',(req,res)=>{
