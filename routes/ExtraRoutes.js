@@ -501,7 +501,315 @@
 // module.exports = router;
 
 
+// router.get("/getEvent", async (req, res) => {
+//   try {
+//     const limit = parseInt(req.query.limit) || 10;
+//     const page = parseInt(req.query.page) || 1;
+//     const offset = (page - 1) * limit;
 
+//     // Get current user ID from token (optional)
+//     let currentUserId = null;
+//     try {
+//       const token = req.headers.authorization?.replace('Bearer ', '');
+//       if (token) {
+//         const jwt = require('jsonwebtoken');
+//         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'abcde');
+//         currentUserId = decoded.id;
+//       }
+//     } catch (err) {
+//       // No valid token, continue as guest
+//       console.log('No valid auth token provided');
+//     }
+
+//     const events = await EventSchema.findAll();
+
+//     const paginatedEvents = await Promise.all(
+//       events
+//         .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+//         .slice(offset, offset + limit)
+//         .map(async (event) => {
+//           const creatorId = event.host_ids?.[0]; // primary host
+//           let creator = null;
+
+//           if (creatorId) {
+//             const userResult = await User.findById(creatorId);
+//             if (userResult) {
+//               creator = {
+//                 _id: userResult._id || userResult.id,
+//                 username: userResult.username,
+//                 email: userResult.email,
+//                 photo: userResult.photo,
+//               };
+//             }
+//           }
+
+//           const {
+//             host_photos,
+//             host_instagram_urls,
+//             host_linkedin_urls,
+//             host_twitter_urls,
+//             host_names,
+//             ...eventData
+//           } = event;
+
+//           // Check if current user has liked this event
+//           const likes = event.likes || [];
+//           const isLiked = currentUserId ? likes.includes(currentUserId) : false;
+
+//           // Check if current user has commented on this event
+//           const comments = event.comments || [];
+//           // const hasCommented = currentUserId ? comments.includes(currentUserId) : false;
+
+//           return {
+//             ...eventData,
+//             event_images:
+//               event.event_images && event.event_images.length > 0
+//                 ? event.event_images.map((img, index) => ({
+//                     id: index,
+//                     url: `data:image/jpeg;base64,${img.toString("base64")}`,
+//                   }))
+//                 : [],
+
+//             host_social: {
+//               photos:
+//                 event.host_photos && event.host_photos.length > 0
+//                   ? event.host_photos.map((img, index) => ({
+//                       id: index,
+//                       url: `data:image/jpeg;base64,${img.toString("base64")}`,
+//                     }))
+//                   : [],
+
+//               instagram_urls: event.host_instagram_urls || [],
+//               linkedin_urls: event.host_linkedin_urls || [],
+//               twitter_urls: event.host_twitter_urls || [],
+//               host_names: event.host_names || [],
+//             },
+
+//             host_banner: event.host_banner
+//               ? {
+//                   url: `data:image/jpeg;base64,${event.host_banner.toString(
+//                     "base64"
+//                   )}`,
+//                 }
+//               : null,
+
+//             host_gallery:
+//               event.host_gallery && event.host_gallery.length > 0
+//                 ? event.host_gallery.map((img, index) => ({
+//                     id: index,
+//                     url: `data:image/jpeg;base64,${img.toString("base64")}`,
+//                   }))
+//                 : [],
+
+//             created_by: creator
+//               ? {
+//                   id: creator._id,
+//                   username: creator.username,
+//                   email: creator.email,
+//                   photo: creator.photo || null,
+//                 }
+//               : null,
+            
+//             total_likes: event.total_likes || likes.length,
+//             is_liked: isLiked,
+            
+//             // Add comment information
+//             total_comments: event.total_comments || comments.length,
+//             is_comment: event.is_comment || (comments.length > 0),
+//             // has_commented: hasCommented,
+//           };
+//         })
+//     );
+
+//     res.status(200).json(paginatedEvents);
+//   } catch (error) {
+//     console.error("Error fetching events:", error);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// });
+
+// // Replace your existing getEvent/:id route with this updated version:
+
+// router.get("/getEvent/:id", async (req, res) => {
+//   try {
+//     const eventId = req.params.id;
+//     const event = await EventSchema.findByIdWithHostDetails(eventId);
+
+//     if (!event) {
+//       return res.status(404).json({ error: "Event not found" });
+//     }
+
+//     // Since no authentication, set like and comment status to false by default
+//     const likes = event.likes || [];
+//     const comments = event.comments || [];
+
+//     // Format event for response with actual image URLs
+//     const formattedEvent = {
+//       ...event,
+//       event_images: event.event_images
+//         ?
+//          event.event_images.map((img, index) => ({
+//             id: index,
+//             url: `data:image/jpeg;base64,${img.toString("base64")}`,
+//           }))
+//         : [],
+
+//       host_photos: event.host_photos
+//         ? event.host_photos.map((img, index) => ({
+//             id: index,
+//             url: `data:image/jpeg;base64,${img.toString("base64")}`,
+//           }))
+//         : [],
+
+//       host_banner: event.host_banner
+//         ? {
+//             url: `data:image/jpeg;base64,${event.host_banner.toString(
+//               "base64"
+//             )}`,
+//           }
+//         : null,
+
+//       host_gallery: event.host_gallery
+//         ? event.host_gallery.map((img, index) => ({
+//             id: index,
+//             url: `data:image/jpeg;base64,${img.toString("base64")}`,
+//           }))
+//         : [],
+
+//       // Add like information - no user authentication so is_liked is always false
+//       total_likes: event.total_likes || likes.length,
+//       is_liked: false,
+
+//       // Add comment information - no user authentication so has_commented is always false
+//       total_comments: event.total_comments || comments.length,
+//       is_comment: event.is_comment || (comments.length > 0),
+//     };
+
+//     res.status(200).json(formattedEvent);
+//   } catch (error) {
+//     console.error("Error fetching event:", error);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// });
+
+
+
+// Add these routes to your router:
+
+// Add comment to an event
+// router.post("/addComment/:eventId", authenticate, async (req, res) => {
+//   try {
+//     const eventId = parseInt(req.params.eventId);
+//     const userId = req.user.id;
+
+//     // Check if event exists
+//     const event = await EventSchema.findById(eventId);
+//     if (!event) {
+//       return res.status(404).json({ error: "Event not found" });
+//     }
+
+//     // Check if user already commented
+//     const comments = event.comments || [];
+//     if (comments.includes(userId)) {
+//       return res.status(400).json({ error: "You have already commented on this event" });
+//     }
+
+//     // Add comment
+//     const updatedEvent = await EventSchema.addComment(eventId, userId);
+
+//     res.status(200).json({
+//       message: "Comment added successfully",
+//       total_comments: updatedEvent.total_comments,
+//       is_comment: updatedEvent.is_comment,
+//     });
+//   } catch (error) {
+//     console.error("Error adding comment:", error);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// });
+
+// // Remove comment from an event
+// router.post("/removeComment/:eventId", authenticate, async (req, res) => {
+//   try {
+//     const eventId = parseInt(req.params.eventId);
+//     const userId = req.user.id;
+
+//     // Check if event exists
+//     const event = await EventSchema.findById(eventId);
+//     if (!event) {
+//       return res.status(404).json({ error: "Event not found" });
+//     }
+
+//     // Check if user has commented
+//     const comments = event.comments || [];
+//     if (!comments.includes(userId)) {
+//       return res.status(400).json({ error: "You haven't commented on this event" });
+//     }
+
+//     // Remove comment
+//     const updatedEvent = await EventSchema.removeComment(eventId, userId);
+
+//     res.status(200).json({
+//       message: "Comment removed successfully",
+//       total_comments: updatedEvent.total_comments,
+//       is_comment: updatedEvent.is_comment,
+//     });
+//   } catch (error) {
+//     console.error("Error removing comment:", error);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// });
+
+// // Get comments for an event
+// router.get("/getComments/:eventId", async (req, res) => {
+//   try {
+//     const eventId = parseInt(req.params.eventId);
+
+//     // Check if event exists
+//     const event = await EventSchema.findById(eventId);
+//     if (!event) {
+//       return res.status(404).json({ error: "Event not found" });
+//     }
+
+//     const comments = event.comments || [];
+
+//     // Get user details for each comment
+//     const commentDetails = await Promise.all(
+//       comments.map(async (userId) => {
+//         try {
+//           const user = await User.findById(userId);
+//           if (user) {
+//             return {
+//               id: user.id || user._id,
+//               username: user.username,
+//               email: user.email,
+//               photo: user.photo
+//                 ? `data:image/jpeg;base64,${user.photo.toString("base64")}`
+//                 : null,
+//             };
+//           }
+//           return null;
+//         } catch (err) {
+//           console.error(`Error fetching user ${userId}:`, err);
+//           return null;
+//         }
+//       })
+//     );
+
+//     // Filter out null values
+//     const validComments = commentDetails.filter((comment) => comment !== null);
+
+//     res.status(200).json({
+//       event_id: eventId,
+//       total_comments: event.total_comments,
+//       is_comment: event.is_comment,
+//       comments: validComments,
+//     });
+//   } catch (error) {
+//     console.error("Error getting event comments:", error);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// });
 
 
 

@@ -7,10 +7,17 @@ const pool = new Pool({
   port: process.env.DATABASEPORT,
   password: process.env.PASSWORD,
   database: process.env.DATABASE,
-  ssl: {
+
+  
+  // ssl: {
+  //   // require: true,
+  //   rejectUnauthorized: false,
+  // }
+ ssl: {
     require: true,
     rejectUnauthorized: false,
-  }
+  },
+  
 });
 
 const EventSchema = {
@@ -37,15 +44,18 @@ const EventSchema = {
     
     // Host Details Arrays for multiple hosts
     host_names: { type: "VARCHAR(255)[]", default: "'{}'" ,notNull:true},
-    host_photos: { type: "BYTEA[]",default: "'{}'" ,notNull:true},//remove
-    host_banner: { type: "BYTEA", default: null },
-    host_gallery: { type: "BYTEA[]", default: "'{}'" },
+    // host_photos: { type: "BYTEA[]",default: "'{}'" ,notNull:true},//remove
+    // host_banner: { type: "BYTEA", default: null },
+    // host_gallery: { type: "BYTEA[]", default: "'{}'" },
     host_instagram_urls: { type: "VARCHAR(500)[]", default: "'{}'" },
     host_linkedin_urls: { type: "VARCHAR(500)[]", default: "'{}'" },
     host_twitter_urls: { type: "VARCHAR(500)[]", default: "'{}'" },
-
+   host_photos: { type: "TEXT[]", default: "'{}'" , notNull:true },
+host_banner: { type: "TEXT", default: null },
+host_gallery: { type: "TEXT[]", default: "'{}'" },
+event_images: { type: "TEXT[]", default: "'{}'" },
     // Event Images
-    event_images: { type: "BYTEA[]", default: "'{}'" },
+    // event_images: { type: "BYTEA[]", default: "'{}'" },
     
     // Additional Details
     duration: { type: "VARCHAR(50)", default: null },
@@ -56,7 +66,13 @@ const EventSchema = {
     age_limit: { type: "VARCHAR(50)", default: null },
     likes: { type: "INTEGER[]", default: "'{}'" },
     total_likes: { type: "INTEGER", default: 0 },
-
+    // comments: { type: "INTEGER[]", default: "'{}'" },
+    comments: { 
+  type: "JSONB", 
+  default: "'[]'::jsonb" 
+},
+total_comments: { type: "INTEGER", default: 0 },
+is_comment: { type: "BOOLEAN", default: false },
     // Timestamps
     created_at: { type: "TIMESTAMP", default: "CURRENT_TIMESTAMP" },
     updated_at: { type: "TIMESTAMP", default: "CURRENT_TIMESTAMP" },
@@ -511,6 +527,117 @@ const EventSchema = {
       throw error;
     }
   },
+
+
+  
+//  async addComment(eventId, userId) {
+//   try {
+//     const event = await this.findById(eventId);
+//     if (!event) {
+//       throw new Error('Event not found');
+//     }
+
+//     const comments = event.comments || [];
+//     const newComments = [...comments, userId];
+    
+//     const updatedEvent = await this.update(eventId, {
+//       comments: newComments,
+//       total_comments: newComments.length,
+//       is_comment: newComments.length > 0
+//     });
+
+//     return updatedEvent;
+//   } catch (error) {
+//     console.error("Error adding comment:", error);
+//     throw error;
+//   }
+// },
+
+// async removeComment(eventId, userId) {
+//   try {
+//     const event = await this.findById(eventId);
+//     if (!event) {
+//       throw new Error('Event not found');
+//     }
+
+//     const comments = event.comments || [];
+//     const newComments = comments.filter(id => id !== userId);
+    
+//     const updatedEvent = await this.update(eventId, {
+//       comments: newComments,
+//       total_comments: newComments.length,
+//       is_comment: newComments.length > 0
+//     });
+
+//     return updatedEvent;
+//   } catch (error) {
+//     console.error("Error removing comment:", error);
+//     throw error;
+//   }
+// }
+
+async addComment(eventId, userId, commentText) {
+  try {
+    const event = await this.findById(eventId);
+    if (!event) {
+      throw new Error('Event not found');
+    }
+
+    const comments = event.comments || [];
+    const newComment = {
+      id: Date.now(), // Simple ID generation
+      user_id: userId,
+      comment_text: commentText,
+      created_at: new Date().toISOString()
+    };
+    
+    const newComments = [...comments, newComment];
+    
+    // const updatedEvent = await this.update(eventId, {
+    //   comments: newComments,
+    //   total_comments: newComments.length,
+    //   is_comment: newComments.length > 0
+    // });
+const updatedEvent = await this.update(eventId, {
+  comments: JSON.stringify(newComments), // ✅ fix: stringify array
+  total_comments: newComments.length,
+  is_comment: newComments.length > 0
+});
+
+    return updatedEvent;
+  } catch (error) {
+    console.error("Error adding comment:", error);
+    throw error;
+  }
+},
+
+// Replace existing removeComment method with:
+async removeComment(eventId, commentId, userId) {
+  try {
+    const event = await this.findById(eventId);
+    if (!event) {
+      throw new Error('Event not found');
+    }
+
+    const comments = event.comments || [];
+    // Only allow user to delete their own comment
+    const newComments = comments.filter(comment => 
+      !(comment.id === commentId && comment.user_id === userId)
+    );
+    
+    const updatedEvent = await this.update(eventId, {
+      comments: newComments,
+      total_comments: newComments.length,
+      is_comment: newComments.length > 0
+    });
+
+    return updatedEvent;
+  } catch (error) {
+    console.error("Error removing comment:", error);
+    throw error;
+  }
+}
 };
+
 
 module.exports = EventSchema;

@@ -1,0 +1,11 @@
+HOST=db.obpfsnzvgmvtzlvxhdpa.supabase.co
+DB_USER=postgres
+PASSWORD="abcd#123@456#789"
+DATABASE=postgres
+DATABASEPORT=6543
+SSL_MODE=require
+PORT=5000
+JWT_SECRET=abcd
+CLIENT_ID="406517724442-375f1rt9dlfcd7f9039mkce928nie6n1.apps.googleusercontent.com"
+EMAIL="socialistmeetup@gmail.com"
+EMAIL_PASSWORD="aubw sxdw zhhg bpro"

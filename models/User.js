@@ -16,10 +16,16 @@ const pool = new Pool({
   port: process.env.DATABASEPORT,
   password: process.env.PASSWORD,
   database: process.env.DATABASE,
- ssl: {
-     require: true,              // ✅ Important for Neon
-    rejectUnauthorized: false   // allows self-signed certs
-  }, // 👈 this disables SSL
+  
+ssl: {
+    require: true,
+    rejectUnauthorized: false,
+  },
+
+//  ssl: {
+//      require: true,            
+//     rejectUnauthorized: false   
+//   }, 
 });
 
 
