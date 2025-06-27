@@ -42,12 +42,6 @@
 
 // module.exports = router;
 
-const express = require('express');
-const router = express.Router();
-const UserSchema = require('../models/User.js');
-const authenticate = require('../middlewares/authenticate.js');
-const multer = require('multer');
-const JWT_SECRET=process.env.JWT_SECRET
 // Configure multer for memory storage
 // const storage = multer.memoryStorage();
 // const upload = multer({ 
@@ -156,16 +150,91 @@ const JWT_SECRET=process.env.JWT_SECRET
 // module.exports=router
 
 
-const supabase=require('./supabase.js')
-const { createClient } = require('@supabase/supabase-js');
+// const supabase=require('./supabase.js')
+// const { createClient } = require('@supabase/supabase-js');
+// const express = require('express');
+// const router = express.Router();
+// const UserSchema = require('../models/User.js');
+// const authenticate = require('../middlewares/authenticate.js');
+// const multer = require('multer');
+// const JWT_SECRET=process.env.JWT_SECRET
+// const storage = multer.memoryStorage();
+// const upload = multer({ storage: storage });
 
-// Supabase setup
+// router.post('/api/profile', upload.single('photo'), async (req, res) => {
+//   try {
+//     const { email, username, gender, city } = req.body;
+//     const file = req.file;
 
-// Multer config for memory storage
+//     if (!email || !username || !gender || !city) {
+//       return res.status(400).json({ message: 'All fields are required.' });
+//     }
+
+//     let photoUrl = null;
+
+//     if (file) {
+//       // Upload image to Supabase Storage
+//       const fileExt = file.originalname.split('.').pop();
+//       const fileName = `profiles/${Date.now()}.${fileExt}`;
+//       const { data, error: uploadError } = await supabase.storage
+//         .from('eventimages')
+//         .upload(fileName, file.buffer, {
+//           contentType: file.mimetype,
+//         });
+
+//       if (uploadError) {
+//         console.error('Supabase upload error:', uploadError);
+//         return res.status(500).json({ message: 'Image upload failed.' });
+//       }
+
+//       // Get public URL
+//       const { data: urlData } = supabase.storage
+//         .from('eventimages')
+//         .getPublicUrl(fileName);
+//       photoUrl = urlData.publicUrl;
+//     }
+// await pool.query(
+//   `INSERT INTO users (email, username, gender, city, photo) VALUES ($1, $2, $3, $4, $5)`,
+//   [email, username, gender, city, photoUrl]
+// );
+//     // Save profile to Supabase table (or any DB you're using)
+//     // const { data: insertData, error: insertError } = await supabase
+//     //   .from('users')//ye tablhaa tu kar de jo naam ho
+//     //   .insert([
+//     //     {
+//     //       email,
+//     //       username,
+//     //       gender,
+//     //       city,
+//     //       photo: photoUrl,
+//     //     },
+//     //   ]);
+
+//     if (insertError) {
+//       console.error('Insert error:', insertError);
+//       return res.status(500).json({ message: 'Failed to save profile.' });
+//     }
+
+//     return res.status(200).json({ message: 'Profile created successfully.' });
+//   } catch (error) {
+//     console.error('Server error:', error);
+//     return res.status(500).json({ message: 'Server error.' });
+//   }
+// });
+
+// module.exports = router;
+
+const express = require('express');
+const router = express.Router();
+const multer = require('multer');
+const supabase = require('./supabase'); // Make sure path is correct
+const UserSchema = require('../models/User'); // Your Neon model
+
+// Multer config
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const upload = multer({ storage: storage }); 
 
-router.post('/api/profile', upload.single('photo'), async (req, res) => {
+router.put('/api/profile', upload.single('photo'), async (req, res) => {
   try {
     const { email, username, gender, city } = req.body;
     const file = req.file;
@@ -176,12 +245,13 @@ router.post('/api/profile', upload.single('photo'), async (req, res) => {
 
     let photoUrl = null;
 
+    // ✅ Upload to Supabase Storage
     if (file) {
-      // Upload image to Supabase Storage
       const fileExt = file.originalname.split('.').pop();
       const fileName = `profiles/${Date.now()}.${fileExt}`;
-      const { data, error: uploadError } = await supabase.storage
-        .from('eventimages')
+
+      const { error: uploadError } = await supabase.storage
+        .from('eventimages') // or 'profileimages' if that’s the bucket
         .upload(fileName, file.buffer, {
           contentType: file.mimetype,
         });
@@ -191,34 +261,27 @@ router.post('/api/profile', upload.single('photo'), async (req, res) => {
         return res.status(500).json({ message: 'Image upload failed.' });
       }
 
-      // Get public URL
       const { data: urlData } = supabase.storage
         .from('eventimages')
         .getPublicUrl(fileName);
+
       photoUrl = urlData.publicUrl;
     }
 
-    // Save profile to Supabase table (or any DB you're using)
-    const { data: insertData, error: insertError } = await supabase
-      .from('users')//ye tablhaa tu kar de jo naam ho
-      .insert([
-        {
-          email,
-          username,
-          gender,
-          city,
-          photo: photoUrl,
-        },
-      ]);
+    // ✅ Insert into Neon DB using your model
+    const newUser = await UserSchema.updateProfileByEmail(email,{
+      username,
+      gender,
+      city,
+      photo: photoUrl,
+    });
 
-    if (insertError) {
-      console.error('Insert error:', insertError);
-      return res.status(500).json({ message: 'Failed to save profile.' });
-    }
-
-    return res.status(200).json({ message: 'Profile created successfully.' });
+    return res.status(200).json({
+      message: 'Profile created successfully.',
+      user: newUser, 
+    });
   } catch (error) {
-    console.error('Server error:', error);
+    console.error('Profile creation error:', error);
     return res.status(500).json({ message: 'Server error.' });
   }
 });

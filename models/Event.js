@@ -19,6 +19,17 @@ const pool = new Pool({
   },
     family: 4,
 });
+console.log("Connecting with config:", {
+  host: process.env.HOST,
+  user: process.env.DB_USER,
+  database: process.env.DATABASE,
+  port: process.env.DATABASEPORT,
+  ssl: {
+    require: true,
+    rejectUnauthorized: false
+  },
+  family: 4
+});
 
 const EventSchema = {
   tableName: "events",

@@ -166,17 +166,22 @@ const fieldDefinitions = Object.entries(this.fields)
         hashedPassword = await bcrypt.hash(userData.password, saltRounds);
       }
 
-      const query = `
-      INSERT INTO ${this.tableName} (username, email, password, photo, auth_type, is_verified, otp)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING id, username, email, photo, auth_type, is_verified, otp, created_at
-    `;
+   const query = `
+  INSERT INTO ${this.tableName} 
+    (username, email, password, photo, gender, city, auth_type, is_verified, otp)
+  VALUES 
+    ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+  RETURNING id, username, email, photo, gender, city, auth_type, is_verified, otp, created_at
+`;
+
     
     const values = [
       userData.username || null,
       userData.email,
       hashedPassword,
       userData.photo || null,
+       userData.gender || null,     // ✅ new field
+  userData.city || null,  
       userData.auth_type || "EMAIL",
       userData.is_verified || false,
       userData.otp || null, // <== this is now included
