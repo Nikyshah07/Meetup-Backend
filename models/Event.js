@@ -84,6 +84,8 @@ event_images: { type: "TEXT[]", default: "'{}'" },
 },
 total_comments: { type: "INTEGER", default: 0 },
 is_comment: { type: "BOOLEAN", default: false },
+saved_by: { type: "INTEGER[]", default: "'{}'" },
+
     // Timestamps
     created_at: { type: "TIMESTAMP", default: "CURRENT_TIMESTAMP" },
     updated_at: { type: "TIMESTAMP", default: "CURRENT_TIMESTAMP" },

@@ -49,6 +49,11 @@ router.post(
   async (req, res) => {
     try {
       const userId = req.user.id;
+      if (!req.files || !req.files.hostPhotos || req.files.hostPhotos.length === 0) {
+        return res.status(400).json({
+          error: ["At least one host photo is required."],
+        });
+      }
       const {
         event_name,
         co_host_ids,
@@ -138,43 +143,7 @@ const formattedTwitterUrls = JSON.parse(host_twitter_urls || "[]");
         }
       }
 
-      // ✅ Insert event in Supabase events table
-      // const { data: insertedEvent, error } = await supabase
-      //   .from("events")
-      //   .insert([
-      //     {
-      //       event_name,
-      //       host_ids: hostIds,
-      //       description,
-      //       event_date,
-      //       event_time,
-      //       location,
-      //       event_tags: formattedTags,
-      //       is_virtual: isVirtualEvent,
-      //       is_free: is_free === "true" || is_free === true,
-      //       ticket_price: is_free === "true" || is_free === true ? 0 : parseFloat(ticket_price) || 0,
-      //       host_names: formattedHostNames,
-      //       host_photos: processedHostPhotos,
-      //       host_banner: processedHostBanner,
-      //       host_gallery: processedHostGallery,
-      //       host_instagram_urls: formattedInstagramUrls,
-      //       host_linkedin_urls: formattedLinkedinUrls,
-      //       host_twitter_urls: formattedTwitterUrls,
-      //       duration: duration || null,
-      //       seating: seating || null,
-      //       layout: layout || null,
-      //       language: language || null,
-      //       pet_allowance: pet_allowance || null,
-      //       age_limit: age_limit || null,
-      //       comments: [],
-      //       total_comments: 0,
-      //       is_comment: false,
-      //       likes: [],
-      //       total_likes: 0,
-      //     },
-      //   ])
-      //   .select()
-      //   .single();
+    
 
       // ✅ Insert event in Neon (PostgreSQL)
 const insertedEvent = await EventSchema.create({
@@ -729,6 +698,86 @@ router.get("/myEvents", authenticate, async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
+
+router.post('/saveEvent/:eventId', authenticate, async (req, res) => {
+  const eventId = parseInt(req.params.eventId);
+  const userId = req.user.id;
+
+  try {
+    const event = await EventSchema.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+
+    const savedBy = event.saved_by || [];
+    let updatedSavedBy;
+
+    if (savedBy.includes(userId)) {
+      // User already saved - remove (unsave)
+      updatedSavedBy = savedBy.filter(id => id !== userId);
+    } else {
+      // Save event
+      updatedSavedBy = [...savedBy, userId];
+    }
+
+    const updatedEvent = await EventSchema.update(eventId, {
+      saved_by: updatedSavedBy,
+    });
+ const isLiked = event.likes?.includes(userId);
+    return res.status(200).json({
+      success: true,
+      message: savedBy.includes(userId) ? 'Event unsaved' : 'Event saved',
+      event:{...updatedEvent, is_liked: isLiked}
+    });
+  } catch (err) {
+    console.error('Error saving event:', err);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+router.get('/getSavedEvents', authenticate, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const allEvents = await EventSchema.findAll();
+
+    const savedEvents = allEvents.filter(event =>
+      Array.isArray(event.saved_by) && event.saved_by.includes(userId)
+    );
+
+    const formattedEvents = savedEvents.map(event => {
+      const isLiked = event.likes?.includes(userId);
+
+      return {
+        ...event,
+        is_liked: isLiked || false,
+        event_images: event.event_images?.map((img, index) => ({
+          id: index,
+          url: img
+        })) || [],
+        host_photos: event.host_photos?.map((img, index) => ({
+          id: index,
+          url: img
+        })) || [],
+        host_banner: event.host_banner ? { url: event.host_banner } : null,
+        host_gallery: event.host_gallery?.map((img, index) => ({
+          id: index,
+          url: img
+        })) || [],
+        total_likes: event.total_likes || (event.likes || []).length,
+        total_comments: event.total_comments || (event.comments || []).length,
+        is_comment: event.is_comment || (event.comments || []).length > 0,
+      };
+    });
+
+    res.status(200).json({ success: true, saved_events: formattedEvents });
+  } catch (err) {
+    console.error('Error fetching saved events:', err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+
 
 
 module.exports=router
