@@ -526,6 +526,100 @@ router.get("/getEvent/:id", async (req, res) => {
 });
 
 
+// router.get("/getEvent", async (req, res) => {
+//   try {
+//     const limit = parseInt(req.query.limit) || 10;
+//     const page = parseInt(req.query.page) || 1;
+//     const offset = (page - 1) * limit;
+
+//     let currentUserId = null;
+//     try {
+//       const token = req.headers.authorization?.replace('Bearer ', '');
+//       if (token) {
+//         const jwt = require('jsonwebtoken');
+//         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'abcde');
+//         currentUserId = decoded.id;
+//       }
+//     } catch (err) {
+//       console.log('No valid auth token provided');
+//     }
+
+//     const events = await EventSchema.findAll();
+
+//     const paginatedEvents = await Promise.all(
+//       events
+//         .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+//         .slice(offset, offset + limit)
+//         .map(async (event) => {
+//           const creatorId = event.host_ids?.[0];
+//           let creator = null;
+
+//           if (creatorId) {
+//             const userResult = await User.findById(creatorId);
+//             if (userResult) {
+//               creator = {
+//                 _id: userResult._id || userResult.id,
+//                 username: userResult.username,
+//                 email: userResult.email,
+//                 photo: userResult.photo,
+//               };
+//             }
+//           }
+
+//           const likes = event.likes || [];
+//           const isLiked = currentUserId ? likes.includes(currentUserId) : false;
+//           const comments = event.comments || [];
+
+//           return {
+//             ...event,
+//             event_images: event.event_images?.map((img, index) => ({
+//               id: index,
+//               url: img
+//             })) || [],
+
+//             host_social: {
+//               photos: event.host_photos?.map((img, index) => ({
+//                 id: index,
+//                 url: img
+//               })) || [],
+//               instagram_urls: event.host_instagram_urls || [],
+//               linkedin_urls: event.host_linkedin_urls || [],
+//               twitter_urls: event.host_twitter_urls || [],
+//               host_names: event.host_names || [],
+//             },
+
+//             host_banner: event.host_banner
+//               ? { url: event.host_banner }
+//               : null,
+
+//             host_gallery: event.host_gallery?.map((img, index) => ({
+//               id: index,
+//               url: img
+//             })) || [],
+
+//             created_by: creator
+//               ? {
+//                   id: creator._id,
+//                   username: creator.username,
+//                   email: creator.email,
+//                   photo: creator.photo || null,
+//                 }
+//               : null,
+
+//             total_likes: event.total_likes || likes.length,
+//             is_liked: isLiked,
+//             total_comments: event.total_comments || comments.length,
+//             is_comment: event.is_comment || (comments.length > 0),
+//           };
+//         })
+//     );
+
+//     res.status(200).json(paginatedEvents);
+//   } catch (error) {
+//     console.error("Error fetching events:", error);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// });
 router.get("/getEvent", async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
@@ -545,10 +639,40 @@ router.get("/getEvent", async (req, res) => {
     }
 
     const events = await EventSchema.findAll();
+    
+    // Get today's date at start of day (00:00:00)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Filter events to include only today and future events
+    const futureEvents = events.filter(event => {
+      const eventDate = new Date(event.event_date);
+      eventDate.setHours(0, 0, 0, 0); // Set to start of day for comparison
+      return eventDate >= today;
+    });
+
+    console.log(`Total events: ${events.length}`);
+    console.log(`Future events: ${futureEvents.length}`);
+    console.log('Future event IDs:', futureEvents.map(e => e.id));
 
     const paginatedEvents = await Promise.all(
-      events
-        .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+      futureEvents
+        .sort((a, b) => {
+          // Sort by date first, then by time
+          const dateA = new Date(a.event_date);
+          const dateB = new Date(b.event_date);
+          
+          if (dateA.getTime() !== dateB.getTime()) {
+            return dateA - dateB;
+          }
+          
+          // If dates are same, sort by time
+          if (a.event_time && b.event_time) {
+            return a.event_time.localeCompare(b.event_time);
+          }
+          
+          return 0;
+        })
         .slice(offset, offset + limit)
         .map(async (event) => {
           const creatorId = event.host_ids?.[0];
@@ -620,8 +744,6 @@ router.get("/getEvent", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-
-
 router.get("/myEvents", authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -739,6 +861,58 @@ router.get('/getSavedEvents', authenticate, async (req, res) => {
   }
 });
 
+// router.get("/featuredEvents", authenticate, async (req, res) => {
+//   try {
+//     const currentUserId = req.user?.id;
+
+//     // Step 1: Get today's date at 00:00
+//     const today = new Date();
+//     today.setHours(0, 0, 0, 0);
+
+//     // Step 2: Get all events from database
+//     const allEvents = await EventSchema.findAll();
+
+//     // Step 3: Filter events that are today or in future
+//     const futureEvents = allEvents.filter(event => {
+//       const eventDate = new Date(event.event_date);
+//       return eventDate >= today;
+//     });
+
+//     if (futureEvents.length === 0) {
+//       return res.status(200).json({ success: true, featured_events: [] });
+//     }
+
+//     // Step 4: Find max likes among future events
+//     const maxLikes = Math.max(...futureEvents.map(event => event.total_likes || 0));
+
+//     // Step 5: Filter events that have the max likes
+//     const featuredEvents = futureEvents.filter(event => (event.total_likes || 0) === maxLikes);
+
+//     // Step 6: Format response
+//     const formatted = featuredEvents.map(event => {
+//       const isLiked = Array.isArray(event.likes) && event.likes.includes(currentUserId);
+//       return {
+//         ...event,
+//         is_liked: isLiked,
+//         event_images: event.event_images?.map((img, i) => ({ id: i, url: img })) || [],
+//         host_photos: event.host_photos?.map((img, i) => ({ id: i, url: img })) || [],
+//         host_banner: event.host_banner ? { url: event.host_banner } : null,
+//         host_gallery: event.host_gallery?.map((img, i) => ({ id: i, url: img })) || [],
+//         total_likes: event.total_likes || 0,
+//         total_comments: event.total_comments || 0,
+//         is_comment: event.is_comment || false,
+//       };
+//     });
+
+//     res.status(200).json({ success: true, featured_events: formatted });
+
+//   } catch (err) {
+//     console.error("Error in featured events:", err);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// });
+
+
 router.get("/featuredEvents", authenticate, async (req, res) => {
   try {
     const currentUserId = req.user?.id;
@@ -760,11 +934,11 @@ router.get("/featuredEvents", authenticate, async (req, res) => {
       return res.status(200).json({ success: true, featured_events: [] });
     }
 
-    // Step 4: Find max likes among future events
-    const maxLikes = Math.max(...futureEvents.map(event => event.total_likes || 0));
+    // ✅ Step 4: Sort future events by total_likes in descending order
+    const sortedByLikes = [...futureEvents].sort((a, b) => (b.total_likes || 0) - (a.total_likes || 0));
 
-    // Step 5: Filter events that have the max likes
-    const featuredEvents = futureEvents.filter(event => (event.total_likes || 0) === maxLikes);
+    // ✅ Step 5: Pick top 5 most liked events
+    const featuredEvents = sortedByLikes.slice(0, 5);
 
     // Step 6: Format response
     const formatted = featuredEvents.map(event => {
@@ -791,6 +965,59 @@ router.get("/featuredEvents", authenticate, async (req, res) => {
 });
 
 
+// router.get("/pastFeaturedEvents", authenticate, async (req, res) => {
+//   try {
+//     const currentUserId = req.user?.id;
+
+//     // Step 1: Get today's date at 00:00
+//     const today = new Date();
+//     today.setHours(0, 0, 0, 0);
+
+//     // Step 2: Get all events
+//     const allEvents = await EventSchema.findAll();
+
+//     // Step 3: Filter only past events (event_date < today)
+//     const pastEvents = allEvents.filter(event => {
+//       const eventDate = new Date(event.event_date);
+//       return eventDate < today;
+//     });
+
+//     if (pastEvents.length === 0) {
+//       return res.status(200).json({ success: true, past_featured_events: [] });
+//     }
+
+//     // Step 4: Find highest like count among past events
+//     const maxLikes = Math.max(...pastEvents.map(event => event.total_likes || 0));
+
+//     // Step 5: Filter only events that have the highest like count
+//     const featuredPastEvents = pastEvents.filter(event => (event.total_likes || 0) === maxLikes);
+
+//     // Step 6: Format response
+//     const formatted = featuredPastEvents.map(event => {
+//       const isLiked = Array.isArray(event.likes) && event.likes.includes(currentUserId);
+//       return {
+//         ...event,
+//         is_liked: isLiked,
+//         event_images: event.event_images?.map((img, i) => ({ id: i, url: img })) || [],
+//         host_photos: event.host_photos?.map((img, i) => ({ id: i, url: img })) || [],
+//         host_banner: event.host_banner ? { url: event.host_banner } : null,
+//         host_gallery: event.host_gallery?.map((img, i) => ({ id: i, url: img })) || [],
+//         total_likes: event.total_likes || 0,
+//         total_comments: event.total_comments || 0,
+//         is_comment: event.is_comment || false,
+//       };
+//     });
+
+//     res.status(200).json({ success: true, past_featured_events: formatted });
+
+//   } catch (err) {
+//     console.error("Error in past featured events:", err);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// });
+
+
+
 router.get("/pastFeaturedEvents", authenticate, async (req, res) => {
   try {
     const currentUserId = req.user?.id;
@@ -812,13 +1039,10 @@ router.get("/pastFeaturedEvents", authenticate, async (req, res) => {
       return res.status(200).json({ success: true, past_featured_events: [] });
     }
 
-    // Step 4: Find highest like count among past events
-    const maxLikes = Math.max(...pastEvents.map(event => event.total_likes || 0));
+    // ✅ Step 4: Skip like filtering — return all past events directly
+    const featuredPastEvents = pastEvents;
 
-    // Step 5: Filter only events that have the highest like count
-    const featuredPastEvents = pastEvents.filter(event => (event.total_likes || 0) === maxLikes);
-
-    // Step 6: Format response
+    // Step 5: Format response
     const formatted = featuredPastEvents.map(event => {
       const isLiked = Array.isArray(event.likes) && event.likes.includes(currentUserId);
       return {
@@ -841,9 +1065,6 @@ router.get("/pastFeaturedEvents", authenticate, async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
-
-
-
 
 
 
