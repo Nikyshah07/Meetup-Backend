@@ -324,44 +324,6 @@ router.get("/getLikes/:eventId", async (req, res) => {
 });
 
 
-// router.post("/addComment/:eventId", authenticate, async (req, res) => {
-//   try {
-//     const eventId = parseInt(req.params.eventId);
-//     const userId = req.user.id;
-//     // const { comment_text } = req.body;
-//     // new add
-//     const comment_text = req.body?.comment_text;
-
-
-//     // Validate comment text
-//     if (!comment_text || comment_text.trim() === '') {
-//       return res.status(400).json({ error: "Comment text is required" });
-//     }
-
-//     if (comment_text.length > 500) {
-//       return res.status(400).json({ error: "Comment must be less than 500 characters" });
-//     }
-
-//     // Check if event exists
-//     const event = await EventSchema.findById(eventId);
-//     if (!event) {
-//       return res.status(404).json({ error: "Event not found" });
-//     }
-
-//     // Add comment with text
-//     const updatedEvent = await EventSchema.addComment(eventId, userId, comment_text.trim());
-
-//     res.status(200).json({
-//       message: "Comment added successfully",
-//       total_comments: updatedEvent.total_comments,
-//       is_comment: updatedEvent.is_comment,
-//     });
-//   } catch (error) {
-//     console.error("Error adding comment:", error);
-//     res.status(500).json({ error: "Server error" });
-//   }
-// });
-
 
 router.post("/addComment/:eventId", authenticate, async (req, res) => {
   try {
@@ -774,6 +736,143 @@ router.get('/getSavedEvents', authenticate, async (req, res) => {
   } catch (err) {
     console.error('Error fetching saved events:', err);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+router.get("/featuredEvents", authenticate, async (req, res) => {
+  try {
+    const currentUserId = req.user?.id;
+
+    // Step 1: Get today's date at 00:00
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Step 2: Get all events from database
+    const allEvents = await EventSchema.findAll();
+
+    // Step 3: Filter events that are today or in future
+    const futureEvents = allEvents.filter(event => {
+      const eventDate = new Date(event.event_date);
+      return eventDate >= today;
+    });
+
+    if (futureEvents.length === 0) {
+      return res.status(200).json({ success: true, featured_events: [] });
+    }
+
+    // Step 4: Find max likes among future events
+    const maxLikes = Math.max(...futureEvents.map(event => event.total_likes || 0));
+
+    // Step 5: Filter events that have the max likes
+    const featuredEvents = futureEvents.filter(event => (event.total_likes || 0) === maxLikes);
+
+    // Step 6: Format response
+    const formatted = featuredEvents.map(event => {
+      const isLiked = Array.isArray(event.likes) && event.likes.includes(currentUserId);
+      return {
+        ...event,
+        is_liked: isLiked,
+        event_images: event.event_images?.map((img, i) => ({ id: i, url: img })) || [],
+        host_photos: event.host_photos?.map((img, i) => ({ id: i, url: img })) || [],
+        host_banner: event.host_banner ? { url: event.host_banner } : null,
+        host_gallery: event.host_gallery?.map((img, i) => ({ id: i, url: img })) || [],
+        total_likes: event.total_likes || 0,
+        total_comments: event.total_comments || 0,
+        is_comment: event.is_comment || false,
+      };
+    });
+
+    res.status(200).json({ success: true, featured_events: formatted });
+
+  } catch (err) {
+    console.error("Error in featured events:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+
+router.get("/pastFeaturedEvents", authenticate, async (req, res) => {
+  try {
+    const currentUserId = req.user?.id;
+
+    // Step 1: Get today's date at 00:00
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Step 2: Get all events
+    const allEvents = await EventSchema.findAll();
+
+    // Step 3: Filter only past events (event_date < today)
+    const pastEvents = allEvents.filter(event => {
+      const eventDate = new Date(event.event_date);
+      return eventDate < today;
+    });
+
+    if (pastEvents.length === 0) {
+      return res.status(200).json({ success: true, past_featured_events: [] });
+    }
+
+    // Step 4: Find highest like count among past events
+    const maxLikes = Math.max(...pastEvents.map(event => event.total_likes || 0));
+
+    // Step 5: Filter only events that have the highest like count
+    const featuredPastEvents = pastEvents.filter(event => (event.total_likes || 0) === maxLikes);
+
+    // Step 6: Format response
+    const formatted = featuredPastEvents.map(event => {
+      const isLiked = Array.isArray(event.likes) && event.likes.includes(currentUserId);
+      return {
+        ...event,
+        is_liked: isLiked,
+        event_images: event.event_images?.map((img, i) => ({ id: i, url: img })) || [],
+        host_photos: event.host_photos?.map((img, i) => ({ id: i, url: img })) || [],
+        host_banner: event.host_banner ? { url: event.host_banner } : null,
+        host_gallery: event.host_gallery?.map((img, i) => ({ id: i, url: img })) || [],
+        total_likes: event.total_likes || 0,
+        total_comments: event.total_comments || 0,
+        is_comment: event.is_comment || false,
+      };
+    });
+
+    res.status(200).json({ success: true, past_featured_events: formatted });
+
+  } catch (err) {
+    console.error("Error in past featured events:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+
+
+
+
+
+
+
+// DELETE /deleteEvent/:id
+router.delete("/deleteEvent/:id", authenticate, async (req, res) => {
+  const eventId = parseInt(req.params.id);
+  const userId = req.user.id;
+
+  try {
+    // 1. Check if event exists
+    const event = await EventSchema.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+
+    // 2. Check if user is in host_ids
+    if (!event.host_ids.includes(userId)) {
+      return res.status(403).json({ success: false, message: "You are not authorized to delete this event" });
+    }
+
+    // 3. Delete the event
+    await EventSchema.delete(eventId);
+
+    return res.status(200).json({ success: true, message: "Event deleted successfully" });
+  } catch (error) {
+    console.error("Delete event error:", error);
+    return res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 });
 
