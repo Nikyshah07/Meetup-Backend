@@ -79,17 +79,17 @@
 //       }
       
 //       // Basic validation
-//       if (!event_name) {
-//         return res.status(400).json({ errors: ["Event name is required."] });
-//       }
+      // if (!event_name) {
+      //   return res.status(400).json({ errors: ["Event name is required."] });
+      // }
 
-//       if (!event_date) {
-//         return res.status(400).json({ errors: ["Event date is required."] });
-//       }
+      // if (!event_date) {
+      //   return res.status(400).json({ errors: ["Event date is required."] });
+      // }
 
-//       if (!event_time) {
-//         return res.status(400).json({ errors: ["Event time is required."] });
-//       }
+      // if (!event_time) {
+      //   return res.status(400).json({ errors: ["Event time is required."] });
+      // }
 
 //       if (!location || location.trim() === "") {
 //         return res.status(400).json({

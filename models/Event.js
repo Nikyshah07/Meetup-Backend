@@ -694,6 +694,21 @@ async removeComment(eventId, commentId, userId) {
     throw error;
   }
 },
+
+
+async getFutureEvents() {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM ${this.tableName}
+       WHERE event_date >= CURRENT_DATE
+       ORDER BY event_date ASC, event_time ASC`
+    );
+    return result.rows;
+  } catch (error) {
+    console.error("Error fetching future events:", error);
+    throw error;
+  }
+},
 }
 
 

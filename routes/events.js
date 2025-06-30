@@ -77,11 +77,41 @@ router.post(
         age_limit,
       } = req.body;
 
-      if (!event_name || !event_date || !event_time || !location || !description || !host_names || !event_tags) {
-        return res.status(400).json({ error: "All required fields must be filled." });
-      }
-
+      // if (!event_name || !event_date || !event_time || !location || !description || !host_names || !event_tags) {
+      //   return res.status(400).json({ error: "All required fields must be filled." });
+      // }
       const isVirtualEvent = is_virtual === "true" || is_virtual === true;
+
+      if (!event_name) {
+  return res.status(400).json({ errors: ["Event name is required."] });
+}
+if (!event_date) {
+  return res.status(400).json({ errors: ["Event date is required."] });
+}
+if (!event_time) {
+  return res.status(400).json({ errors: ["Event time is required."] });
+}
+if (!location || location.trim() === "") {
+  return res.status(400).json({
+    errors: isVirtualEvent
+      ? ["Event URL is required for online events."]
+      : ["Physical location is required for offline events."],
+  });
+}
+if (!event_tags) {
+  return res.status(400).json({ errors: ["Event tags is required."] });
+}
+if (!description.trim()) {
+  return res.status(400).json({ errors: ["Description is required."] });
+}
+if (!host_names || !host_names.length) {
+  return res
+    .status(400)
+    .json({ errors: ["At least one host name is required."] });
+}
+
+
+      
 
       if (isVirtualEvent && !isValidHttpsUrl(location)) {
         return res.status(400).json({ error: "Enter a valid HTTPS URL for virtual events." });
@@ -620,12 +650,9 @@ router.get("/getEvent/:id", async (req, res) => {
 //     res.status(500).json({ error: "Server error" });
 //   }
 // });
+
 router.get("/getEvent", async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 10;
-    const page = parseInt(req.query.page) || 1;
-    const offset = (page - 1) * limit;
-
     let currentUserId = null;
     try {
       const token = req.headers.authorization?.replace('Bearer ', '');
@@ -638,112 +665,87 @@ router.get("/getEvent", async (req, res) => {
       console.log('No valid auth token provided');
     }
 
-    const events = await EventSchema.findAll();
+    // ✅ FIX: Get all future events directly from database (no pagination)
+    const futureEvents = await EventSchema.getFutureEvents();
     
-    // Get today's date at start of day (00:00:00)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Filter events to include only today and future events
-    const futureEvents = events.filter(event => {
-      const eventDate = new Date(event.event_date);
-      eventDate.setHours(0, 0, 0, 0); // Set to start of day for comparison
-      return eventDate >= today;
-    });
-
-    console.log(`Total events: ${events.length}`);
-    console.log(`Future events: ${futureEvents.length}`);
+    console.log(`Future events from DB: ${futureEvents.length}`);
     console.log('Future event IDs:', futureEvents.map(e => e.id));
 
     const paginatedEvents = await Promise.all(
-      futureEvents
-        .sort((a, b) => {
-          // Sort by date first, then by time
-          const dateA = new Date(a.event_date);
-          const dateB = new Date(b.event_date);
-          
-          if (dateA.getTime() !== dateB.getTime()) {
-            return dateA - dateB;
-          }
-          
-          // If dates are same, sort by time
-          if (a.event_time && b.event_time) {
-            return a.event_time.localeCompare(b.event_time);
-          }
-          
-          return 0;
-        })
-        .slice(offset, offset + limit)
-        .map(async (event) => {
-          const creatorId = event.host_ids?.[0];
-          let creator = null;
+      futureEvents.map(async (event) => {
+        const creatorId = event.host_ids?.[0];
+        let creator = null;
 
-          if (creatorId) {
-            const userResult = await User.findById(creatorId);
-            if (userResult) {
-              creator = {
-                _id: userResult._id || userResult.id,
-                username: userResult.username,
-                email: userResult.email,
-                photo: userResult.photo,
-              };
-            }
+        if (creatorId) {
+          const userResult = await User.findById(creatorId);
+          if (userResult) {
+            creator = {
+              _id: userResult._id || userResult.id,
+              username: userResult.username,
+              email: userResult.email,
+              photo: userResult.photo,
+            };
           }
+        }
 
-          const likes = event.likes || [];
-          const isLiked = currentUserId ? likes.includes(currentUserId) : false;
-          const comments = event.comments || [];
+        const likes = event.likes || [];
+        const isLiked = currentUserId ? likes.includes(currentUserId) : false;
+        const comments = event.comments || [];
 
-          return {
-            ...event,
-            event_images: event.event_images?.map((img, index) => ({
+        return {
+          ...event,
+          event_images: event.event_images?.map((img, index) => ({
+            id: index,
+            url: img
+          })) || [],
+
+          host_social: {
+            photos: event.host_photos?.map((img, index) => ({
               id: index,
               url: img
             })) || [],
+            instagram_urls: event.host_instagram_urls || [],
+            linkedin_urls: event.host_linkedin_urls || [],
+            twitter_urls: event.host_twitter_urls || [],
+            host_names: event.host_names || [],
+          },
 
-            host_social: {
-              photos: event.host_photos?.map((img, index) => ({
-                id: index,
-                url: img
-              })) || [],
-              instagram_urls: event.host_instagram_urls || [],
-              linkedin_urls: event.host_linkedin_urls || [],
-              twitter_urls: event.host_twitter_urls || [],
-              host_names: event.host_names || [],
-            },
+          host_banner: event.host_banner
+            ? { url: event.host_banner }
+            : null,
 
-            host_banner: event.host_banner
-              ? { url: event.host_banner }
-              : null,
+          host_gallery: event.host_gallery?.map((img, index) => ({
+            id: index,
+            url: img
+          })) || [],
 
-            host_gallery: event.host_gallery?.map((img, index) => ({
-              id: index,
-              url: img
-            })) || [],
+          created_by: creator
+            ? {
+                id: creator._id,
+                username: creator.username,
+                email: creator.email,
+                photo: creator.photo || null,
+              }
+            : null,
 
-            created_by: creator
-              ? {
-                  id: creator._id,
-                  username: creator.username,
-                  email: creator.email,
-                  photo: creator.photo || null,
-                }
-              : null,
-
-            total_likes: event.total_likes || likes.length,
-            is_liked: isLiked,
-            total_comments: event.total_comments || comments.length,
-            is_comment: event.is_comment || (comments.length > 0),
-          };
-        })
+          total_likes: event.total_likes || likes.length,
+          is_liked: isLiked,
+          total_comments: event.total_comments || comments.length,
+          is_comment: event.is_comment || (comments.length > 0),
+        };
+      })
     );
 
-    res.status(200).json(paginatedEvents);
+    res.status(200).json(paginatedEvents );
   } catch (error) {
     console.error("Error fetching events:", error);
     res.status(500).json({ error: "Server error" });
   }
 });
+
+
+
+
 router.get("/myEvents", authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
