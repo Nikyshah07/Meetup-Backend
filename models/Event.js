@@ -263,20 +263,34 @@ saved_by: { type: "INTEGER[]", default: "'{}'" },
     }
   },
 
-  async findAll(limit = 10, offset = 0) {
-    try {
-      const result = await pool.query(
-        `SELECT * FROM ${this.tableName} 
-         ORDER BY event_date ASC, event_time ASC 
-         LIMIT $1 OFFSET $2`,
-        [limit, offset]
-      );
-      return result.rows;
-    } catch (error) {
-      console.error("Error fetching all events:", error);
-      throw error;
-    }
-  },
+  // async findAll(limit = 10, offset = 0) {
+  //   try {
+  //     const result = await pool.query(
+  //       `SELECT * FROM ${this.tableName} 
+  //        ORDER BY event_date ASC, event_time ASC 
+  //        LIMIT $1 OFFSET $2`,
+  //       [limit, offset]
+  //     );
+  //     return result.rows;
+  //   } catch (error) {
+  //     console.error("Error fetching all events:", error);
+  //     throw error;
+  //   }
+  // },
+
+  async findAll() {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM ${this.tableName} 
+       ORDER BY event_date ASC, event_time ASC`
+    );
+    return result.rows;
+  } catch (error) {
+    console.error("Error fetching all events:", error);
+    throw error;
+  }
+}
+,
 
   async findByHostId(hostId) {
     try {

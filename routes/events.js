@@ -461,9 +461,27 @@ router.get("/getComments/:eventId", async (req, res) => {
     }
 
     // const comments = event.comments || [];
-    const comments = Array.isArray(event.comments)
-  ? event.comments
-  : JSON.parse(event.comments || '[]');
+
+  //   const comments = Array.isArray(event.comments)
+  // ? event.comments
+  // : JSON.parse(event.comments || '[]');
+
+
+ let comments = [];
+
+if (Array.isArray(event.comments)) {
+  comments = event.comments; // already an array, just use it
+} else if (typeof event.comments === 'string') {
+  try {
+    comments = JSON.parse(event.comments); // safely try to convert string to array
+  } catch {
+    comments = []; // fallback if parsing fails
+  }
+} else {
+  comments = []; // if it's null, object, or anything else — fallback
+}
+
+
 
     // Get user details for each comment
     const commentDetails = await Promise.all(
