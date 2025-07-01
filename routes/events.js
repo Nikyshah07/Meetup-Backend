@@ -208,7 +208,7 @@ const insertedEvent = await EventSchema.create({
   total_likes: 0,
 });
 
-
+insertedEvent.is_saved = insertedEvent.saved_by?.includes(userId) || false;
       // if (error) {
       //   console.error("Insert event error:", error);
       //   return res.status(500).json({ error: "Failed to insert event into Supabase." });
@@ -530,6 +530,7 @@ router.get("/getEvent/:id", async (req, res) => {
   try {
     const eventId = req.params.id;
     const event = await EventSchema.findByIdWithHostDetails(eventId);
+  const userId = req.user?.id || null;
 
     if (!event) {
       return res.status(404).json({ error: "Event not found" });
@@ -565,6 +566,7 @@ router.get("/getEvent/:id", async (req, res) => {
       total_comments: event.total_comments || comments.length,
       is_comment: event.is_comment || (comments.length > 0),
     };
+    formattedEvent.is_saved = userId ? event.saved_by?.includes(userId) : false;
 
     res.status(200).json(formattedEvent);
   } catch (error) {
@@ -708,6 +710,8 @@ router.get("/getEvent", async (req, res) => {
 
         const likes = event.likes || [];
         const isLiked = currentUserId ? likes.includes(currentUserId) : false;
+        const isSaved = currentUserId ? event.saved_by?.includes(currentUserId) : false;
+
         const comments = event.comments || [];
 
         return {
@@ -748,6 +752,7 @@ router.get("/getEvent", async (req, res) => {
 
           total_likes: event.total_likes || likes.length,
           is_liked: isLiked,
+          is_saved: isSaved,
           total_comments: event.total_comments || comments.length,
           is_comment: event.is_comment || (comments.length > 0),
         };
@@ -793,6 +798,7 @@ router.get("/myEvents", authenticate, async (req, res) => {
         total_likes: event.total_likes || (event.likes || []).length,
         total_comments: event.total_comments || (event.comments || []).length,
         is_comment: event.is_comment || (event.comments || []).length > 0,
+        is_saved: event.saved_by?.includes(userId) || false 
       };
     });
 
@@ -829,10 +835,12 @@ router.post('/saveEvent/:eventId', authenticate, async (req, res) => {
       saved_by: updatedSavedBy,
     });
  const isLiked = event.likes?.includes(userId);
+ const isSaved = !savedBy.includes(userId);
+
     return res.status(200).json({
       success: true,
       message: savedBy.includes(userId) ? 'Event unsaved' : 'Event saved',
-      event:{...updatedEvent, is_liked: isLiked}
+      event:{...updatedEvent, is_liked: isLiked,is_saved: isSaved,}
     });
   } catch (err) {
     console.error('Error saving event:', err);
@@ -855,6 +863,7 @@ router.get('/getSavedEvents', authenticate, async (req, res) => {
       return {
         ...event,
         is_liked: isLiked || false,
+        is_saved: true,
         event_images: event.event_images?.map((img, index) => ({
           id: index,
           url: img
@@ -973,6 +982,7 @@ router.get("/featuredEvents", authenticate, async (req, res) => {
         total_likes: event.total_likes || 0,
         total_comments: event.total_comments || 0,
         is_comment: event.is_comment || false,
+        is_saved: Array.isArray(event.saved_by) && event.saved_by.includes(currentUserId),
       };
     });
 
@@ -1075,6 +1085,7 @@ router.get("/pastFeaturedEvents", authenticate, async (req, res) => {
         total_likes: event.total_likes || 0,
         total_comments: event.total_comments || 0,
         is_comment: event.is_comment || false,
+         is_saved: Array.isArray(event.saved_by) && event.saved_by.includes(currentUserId), 
       };
     });
 
@@ -1085,10 +1096,6 @@ router.get("/pastFeaturedEvents", authenticate, async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
-
-
-
-
 
 // DELETE /deleteEvent/:id
 router.delete("/deleteEvent/:id", authenticate, async (req, res) => {

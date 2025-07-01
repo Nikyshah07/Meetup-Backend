@@ -309,6 +309,7 @@ saved_by: { type: "INTEGER[]", default: "'{}'" },
 
   async update(id, updateData) {
     try {
+     
       // Validate update data if it contains virtual event fields
       if (updateData.hasOwnProperty('is_virtual') || updateData.hasOwnProperty('location')) {
         // Get current event data to merge with update data for validation
